@@ -1,0 +1,16 @@
+{
+  "name": "@stackit/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "dependencies": {
+    "@antfu/eslint-config": "^6.2.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/build
+**/.next
+**/.nuxt
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.idea
+.vscode
+*.log
+.DS_Store
+packages/db/generated

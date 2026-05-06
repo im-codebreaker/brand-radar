@@ -1,0 +1,4 @@
+{
+  "extends": "@stackit/tsconfig/base.json",
+  "include": ["src/**/*.ts"]
+}

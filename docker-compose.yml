@@ -1,0 +1,114 @@
+services:
+  ###################################################
+  # Reverse proxy — nginx on :80 routes everything.
+  #   /      → web (Vite dev server, port 5173)
+  #   /api/  → api (Fastify, port 3000)
+  #   /docs  → api (Swagger UI)
+  # Static config, no docker socket mount, no API negotiation.
+  ###################################################
+  proxy:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./infrastructure/nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+
+  ###################################################
+  # PostgreSQL
+  ###################################################
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-stackit}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ###################################################
+  # Redis (optional — pruned by `pnpm setup` if declined)
+  ###################################################
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ###################################################
+  # API — Fastify backend, also exposed directly on :3000
+  ###################################################
+  api:
+    build:
+      context: .
+      target: api-dev
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-stackit}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      API_HOST: 0.0.0.0
+      API_PORT: 3000
+      BASE_URL: http://localhost
+      FRONTEND_URL: http://localhost
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-in-production-please}
+      BETTER_AUTH_URL: http://localhost
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    develop:
+      watch:
+        - path: ./apps/api/src
+          action: sync
+          target: /stackit/apps/api/src
+        - path: ./packages
+          action: sync
+          target: /stackit/packages
+        - path: ./apps/api/package.json
+          action: rebuild
+
+  ###################################################
+  # Web — Vue 3 SPA via Vite, also exposed directly on :5173
+  ###################################################
+  web:
+    build:
+      context: .
+      target: web-dev
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: /api
+      VITE_API_PROXY_TARGET: http://api:3000
+    depends_on:
+      - api
+    develop:
+      watch:
+        - path: ./apps/web/src
+          action: sync
+          target: /stackit/apps/web/src
+        - path: ./apps/web/package.json
+          action: rebuild
+
+volumes:
+  postgres-data:
+  redis-data:

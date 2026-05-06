@@ -1,0 +1,39 @@
+{
+  "name": "stackit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stack it your way — minimal full-stack starter (Vue 3 + Fastify + Prisma)",
+  "packageManager": "pnpm@10.33.0",
+  "type": "module",
+  "scripts": {
+    "setup": "tsx scripts/init.ts",
+    "dev": "pnpm -r --parallel --filter './apps/*' run dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "lint:fix": "pnpm -r run lint:fix",
+    "test": "pnpm -r run test",
+    "type-check": "pnpm -r run type-check",
+    "db:generate": "pnpm --filter @stackit/db exec prisma generate",
+    "db:migrate": "pnpm --filter @stackit/db exec prisma migrate dev",
+    "db:push": "pnpm --filter @stackit/db exec prisma db push",
+    "db:reset": "pnpm --filter @stackit/db exec prisma migrate reset",
+    "db:seed": "pnpm --filter @stackit/db run db:seed",
+    "db:studio": "pnpm --filter @stackit/db exec prisma studio"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@types/node": "^24.12.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "yaml": "^2.7.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "vue-demi"
+    ]
+  }
+}

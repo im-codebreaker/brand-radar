@@ -1,0 +1,33 @@
+{
+  "name": "@stackit/validations",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./users": "./src/users/index.ts",
+    "./users/entity": "./src/users/entity.ts",
+    "./users/params": "./src/users/params.ts",
+    "./users/requests": "./src/users/requests.ts",
+    "./users/responses": "./src/users/responses.ts",
+    "./users/routes": "./src/users/routes.ts",
+    "./shared": "./src/shared/index.ts",
+    "./env": "./src/env/api.ts"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@stackit/eslint-config": "workspace:*",
+    "@stackit/tsconfig": "workspace:*",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3"
+  }
+}
