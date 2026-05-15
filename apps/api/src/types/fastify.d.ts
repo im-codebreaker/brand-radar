@@ -1,4 +1,7 @@
-import type { PrismaClient } from '@stackit/db'
+/* eslint-disable perfectionist/sort-imports */
+// Import order is load-bearing: REDIS_AUGMENT / AUTH_AUGMENT marker blocks
+// are removed independently by `pnpm setup` if those modules are declined.
+import type { DatabaseClient } from '@stackit/db'
 import type { createUsersRepository } from '../repositories/users.js'
 // REDIS_AUGMENT_START
 import type { RedisClientType } from '@stackit/cache'
@@ -9,7 +12,7 @@ import type { createAuth } from '@stackit/auth'
 
 declare module 'fastify' {
   interface FastifyInstance {
-    db: PrismaClient
+    db: DatabaseClient
     usersRepository: ReturnType<typeof createUsersRepository>
 
     // REDIS_DECORATOR_START

@@ -8,7 +8,7 @@ export default fp(async (fastify) => {
     openapi: {
       info: {
         title: 'stackit API',
-        description: 'Minimal full-stack starter — Vue 3 + Fastify + Prisma',
+        description: 'Minimal full-stack starter — Vue 3 + Fastify + Drizzle',
         version: '0.1.0',
       },
       servers: [{ url: '/api/v1' }],

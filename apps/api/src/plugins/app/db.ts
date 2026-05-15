@@ -10,4 +10,4 @@ export default fp(async (fastify) => {
   fastify.addHook('onClose', async () => {
     await db.$disconnect()
   })
-}, { name: 'prisma' })
+}, { name: 'db' })

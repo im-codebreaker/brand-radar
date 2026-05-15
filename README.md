@@ -1,6 +1,6 @@
 # stackit
 
-> Stack it your way — minimal full-stack starter (Vue 3 + Fastify + Prisma).
+> Stack it your way — minimal full-stack starter (Vue 3 + Fastify + Drizzle).
 
 A clean, opinionated, modular pnpm monorepo for shipping a full-stack app fast.
 
@@ -10,7 +10,7 @@ A clean, opinionated, modular pnpm monorepo for shipping a full-stack app fast.
 | ------------ | ----------------------------------------------------------- |
 | Frontend     | Vue 3.5, Vite 7, Pinia, Vue Router, Tailwind v4, @rebnd/ui  |
 | Backend      | Fastify 5, autoload, type-provider-zod                      |
-| Database     | PostgreSQL via Prisma                                        |
+| Database     | PostgreSQL via Drizzle ORM (pgvector-ready)                  |
 | Validation   | Zod v4 — shared between frontend and backend                |
 | Cache        | Redis (optional)                                             |
 | Auth         | better-auth (optional)                                       |
@@ -53,7 +53,7 @@ stackit/
 ├── packages/
 │   ├── validations/            @stackit/validations — Zod schemas (source of truth)
 │   ├── types/                  @stackit/types       — pure TS types & API envelopes
-│   ├── db/                     @stackit/db          — Prisma client factory
+│   ├── db/                     @stackit/db          — Drizzle client + schema
 │   ├── cache/                  @stackit/cache       — Redis client (optional)
 │   ├── auth/                   @stackit/auth        — better-auth wrapper (optional)
 │   ├── helpers/                @stackit/helpers     — shared utilities
@@ -94,15 +94,18 @@ const { form, errors, validate } = useZodForm(users.requests.CreateUserSchema, {
 | `pnpm lint`         | ESLint across the repo                                |
 | `pnpm test`         | Vitest across api + web                               |
 | `pnpm type-check`   | tsc / vue-tsc across all packages                     |
-| `pnpm db:migrate`   | Prisma migrate (dev)                                  |
+| `pnpm db:generate`  | Generate a Drizzle migration from schema changes      |
+| `pnpm db:migrate`   | Apply pending Drizzle migrations                      |
+| `pnpm db:push`      | Push schema to DB without migration (dev only)        |
 | `pnpm db:seed`      | Seed the database                                     |
-| `pnpm db:studio`    | Open Prisma Studio                                    |
+| `pnpm db:studio`    | Open Drizzle Studio                                   |
 
 ## Architecture choices
 
 - **Source-only packages** — every shared package exports `./src/index.ts` directly. Apps compile through their own tooling (`tsx`, `vite`). No build step in `packages/`.
 - **Autoloaded Fastify plugins** — drop a file in `plugins/external/` or `plugins/app/`; it registers automatically. Removing a feature is just deleting its file.
-- **Repository pattern** — handlers receive repositories via DI, repositories take an optional `tx` for transactions.
+- **Repository pattern** — handlers receive repositories via DI, repositories take an optional `tx` for Drizzle transactions.
+- **pgvector-ready** — Drizzle natively supports the `vector` column type and `cosineDistance`/`l2Distance` operators. Add `CREATE EXTENSION IF NOT EXISTS vector;` to a migration, declare a `vector('embedding', { dimensions: 1536 })` column, and similarity queries become fully typed.
 - **Module augmentation** — `apps/api/src/types/fastify.d.ts` declares decorators (`fastify.db`, `fastify.usersRepository`, `fastify.cache`, `fastify.auth`).
 - **One demo domain (`users`)** — full CRUD slice with shared schemas, repository, handler, route, store, and view as a template to copy.
 
@@ -113,7 +116,7 @@ The `pnpm setup` script asks at install time. Each module is structured so that 
 | Module     | Removed if declined                                                              |
 | ---------- | -------------------------------------------------------------------------------- |
 | Redis      | `packages/cache/`, `apps/api/src/plugins/app/redis.ts`, redis service in compose |
-| better-auth | `packages/auth/`, auth plugin/route/lib, login view, auth store, auth.prisma     |
+| better-auth | `packages/auth/`, auth plugin/route/lib, login view, auth store, auth schema     |
 
 Re-enabling a module after removal: copy it from this template's git history, or just `pnpm add` and rebuild from scratch.
 

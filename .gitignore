@@ -24,9 +24,8 @@ pnpm-debug.log*
 *.swp
 .DS_Store
 
-# prisma
-packages/db/generated/
-packages/db/prisma/dev.db*
+# db
+packages/db/dev.db*
 
 # vite
 apps/web/.vite/
