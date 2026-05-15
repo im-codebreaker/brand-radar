@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-4-5-20250929",
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Bash(pnpm:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose:*)",
+      "Bash(tsx:*)",
+      "Bash(vitest:*)",
+      "Bash(eslint:*)",
+      "Bash(drizzle-kit:*)",
+      "Bash(psql:*)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*secret*)",
+      "Read(**/*credential*)"
+    ]
+  },
+  "includeCoAuthoredBy": false
+}
