@@ -13,7 +13,7 @@ import { RouterLink, RouterView } from 'vue-router'
           Users
         </RouterLink>
         <span class="ml-auto text-xs text-slate-500">
-          Vue 3 + Fastify + Prisma
+          Vue 3 + Fastify + Drizzle
         </span>
       </nav>
     </header>

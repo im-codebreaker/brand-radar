@@ -18,4 +18,4 @@ export default fp(async (fastify) => {
     request.session = session?.session ?? null
     request.userId = session?.user?.id
   })
-}, { name: 'auth', dependencies: ['prisma'] })
+}, { name: 'auth', dependencies: ['db'] })

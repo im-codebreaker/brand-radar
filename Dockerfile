@@ -30,12 +30,10 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 ###################################################
 FROM deps AS api-build
 ENV NODE_ENV=production
-RUN pnpm --filter @stackit/db exec prisma generate \
- && pnpm --filter @stackit/api run build
+RUN pnpm --filter @stackit/api run build
 
 FROM deps AS api-dev
 ENV NODE_ENV=development
-RUN pnpm --filter @stackit/db exec prisma generate
 WORKDIR /stackit/apps/api
 EXPOSE 3000
 CMD ["pnpm", "dev"]

@@ -24,7 +24,7 @@ onMounted(async () => {
         Stack it your way
       </h1>
       <p class="mt-2 text-slate-600 dark:text-slate-400">
-        Minimal full-stack starter — Vue 3 + Fastify + Prisma
+        Minimal full-stack starter — Vue 3 + Fastify + Drizzle
       </p>
     </div>
 

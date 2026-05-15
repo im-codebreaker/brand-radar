@@ -1,9 +1,10 @@
-import type { PrismaClient } from '@stackit/db'
+import type { DatabaseClient } from '@stackit/db'
+import { accounts, sessions, users, verifications } from '@stackit/db'
 import { betterAuth } from 'better-auth'
-import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 
 export interface AuthConfig {
-  db: PrismaClient
+  db: DatabaseClient
   baseURL: string
   secret: string
   trustedOrigins?: string[]
@@ -12,7 +13,15 @@ export interface AuthConfig {
 
 export function createAuth(config: AuthConfig) {
   return betterAuth({
-    database: prismaAdapter(config.db, { provider: 'postgresql' }),
+    database: drizzleAdapter(config.db, {
+      provider: 'pg',
+      schema: {
+        user: users,
+        session: sessions,
+        account: accounts,
+        verification: verifications,
+      },
+    }),
     baseURL: config.baseURL,
     secret: config.secret,
     trustedOrigins: config.trustedOrigins,

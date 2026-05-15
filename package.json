@@ -2,7 +2,7 @@
   "name": "stackit",
   "version": "0.1.0",
   "private": true,
-  "description": "Stack it your way — minimal full-stack starter (Vue 3 + Fastify + Prisma)",
+  "description": "Stack it your way — minimal full-stack starter (Vue 3 + Fastify + Drizzle)",
   "packageManager": "pnpm@10.33.0",
   "type": "module",
   "scripts": {
@@ -13,12 +13,12 @@
     "lint:fix": "pnpm -r run lint:fix",
     "test": "pnpm -r run test",
     "type-check": "pnpm -r run type-check",
-    "db:generate": "pnpm --filter @stackit/db exec prisma generate",
-    "db:migrate": "pnpm --filter @stackit/db exec prisma migrate dev",
-    "db:push": "pnpm --filter @stackit/db exec prisma db push",
-    "db:reset": "pnpm --filter @stackit/db exec prisma migrate reset",
+    "db:generate": "pnpm --filter @stackit/db run db:generate",
+    "db:migrate": "pnpm --filter @stackit/db run db:migrate",
+    "db:push": "pnpm --filter @stackit/db run db:push",
+    "db:reset": "pnpm --filter @stackit/db run db:reset",
     "db:seed": "pnpm --filter @stackit/db run db:seed",
-    "db:studio": "pnpm --filter @stackit/db exec prisma studio"
+    "db:studio": "pnpm --filter @stackit/db run db:studio"
   },
   "devDependencies": {
     "@clack/prompts": "^0.11.0",
@@ -29,10 +29,7 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@prisma/client",
-      "@prisma/engines",
       "esbuild",
-      "prisma",
       "vue-demi"
     ]
   }

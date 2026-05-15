@@ -6,7 +6,7 @@
  *
  * Prompts for optional modules (Redis, better-auth) and project naming,
  * then prunes opted-out files, removes their dependencies, edits
- * docker-compose / .env / Prisma schema, and finally deletes itself.
+ * docker-compose / .env / Drizzle schema, and finally deletes itself.
  *
  * The pruning manifest is declarative — see MODULES below. Each module
  * lists files to remove and edits to perform across the repo. Because
@@ -27,7 +27,7 @@ interface ModuleSpec {
   pkgRemovals?: { file: string, deps: string[] }[]
   envKeysToRemove?: string[]
   composeServicesToRemove?: string[]
-  /** `// MARKER_START` … `// MARKER_END` blocks to delete (works for TS, Vue, Prisma) */
+  /** `// MARKER_START` … `// MARKER_END` blocks to delete (works for TS and Vue) */
   markedBlocks?: { file: string, marker: string }[]
   rewriteFiles?: { file: string, content: string }[]
 }
@@ -60,7 +60,7 @@ const MODULES: Record<'redis' | 'auth', ModuleSpec> = {
       'apps/api/src/plugins/app/auth.ts',
       'apps/api/src/lib/auth.ts',
       'apps/api/src/routes/auth.ts',
-      'packages/db/prisma/models/auth.prisma',
+      'packages/db/src/schema/auth.ts',
       'apps/web/src/lib/auth-client.ts',
       'apps/web/src/views/LoginView.vue',
       'apps/web/src/stores/auth.ts',
@@ -78,7 +78,8 @@ const MODULES: Record<'redis' | 'auth', ModuleSpec> = {
       'OAUTH_GOOGLE_SECRET',
     ],
     markedBlocks: [
-      { file: 'packages/db/prisma/models/user.prisma', marker: 'BETTER_AUTH_RELATIONS' },
+      { file: 'packages/db/src/schema/index.ts', marker: 'BETTER_AUTH_SCHEMA' },
+      { file: 'packages/db/src/schema/users.ts', marker: 'BETTER_AUTH_RELATIONS' },
       { file: 'apps/web/src/router/index.ts', marker: 'AUTH_ROUTES' },
       { file: 'apps/api/src/types/fastify.d.ts', marker: 'AUTH_AUGMENT' },
       { file: 'apps/api/src/types/fastify.d.ts', marker: 'AUTH_DECORATOR' },
@@ -147,16 +148,17 @@ function removeComposeServices(composePath: string, services: string[]) {
 function removeMarkedBlock(filePath: string, marker: string) {
   if (!existsSync(filePath))
     return
-  const content = readFileSync(filePath, 'utf8')
+  let content = readFileSync(filePath, 'utf8')
   const startRe = new RegExp(`^[ \\t]*//\\s*${marker}_START.*$\\n?`, 'm')
   const endRe = new RegExp(`^[ \\t]*//\\s*${marker}_END.*$\\n?`, 'm')
-  const start = content.match(startRe)
-  const end = content.match(endRe)
-  if (!start || !end || start.index === undefined || end.index === undefined)
-    return
-  const before = content.slice(0, start.index)
-  const after = content.slice(end.index + end[0].length)
-  writeFileSync(filePath, before + after)
+  while (true) {
+    const start = content.match(startRe)
+    const end = content.match(endRe)
+    if (!start || !end || start.index === undefined || end.index === undefined)
+      break
+    content = content.slice(0, start.index) + content.slice(end.index + end[0].length)
+  }
+  writeFileSync(filePath, content)
 }
 
 function renameProject(projectName: string) {
