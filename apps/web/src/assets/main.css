@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('@rebnd/ui/dist/styles.css');
+@import "tailwindcss";
 
 :root {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
