@@ -14,6 +14,8 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--log.level=INFO"
+    environment:
+      - DOCKER_API_VERSION=1.45
     ports:
       - "80:80"
       - "8080:8080"  # Traefik dashboard
