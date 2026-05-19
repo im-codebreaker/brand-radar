@@ -1,4 +1,4 @@
-import { createDatabaseClient } from '@stackit/db'
+import { createDatabaseClient } from '@brand-radar/db'
 import fp from 'fastify-plugin'
 import { env } from '../../config/env.js'
 

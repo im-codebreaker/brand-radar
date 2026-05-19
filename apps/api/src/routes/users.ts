@@ -1,5 +1,5 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
-import { users } from '@stackit/validations'
+import { users } from '@brand-radar/validations'
 import { createUserHandlers } from '../handlers/users.js'
 
 const plugin: FastifyPluginAsyncZod = async (fastify) => {

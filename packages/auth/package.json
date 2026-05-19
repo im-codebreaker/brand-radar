@@ -1,5 +1,5 @@
 {
-  "name": "@stackit/auth",
+  "name": "@brand-radar/auth",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -16,15 +16,15 @@
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@stackit/db": "workspace:*"
+    "@brand-radar/db": "workspace:*"
   },
   "dependencies": {
     "better-auth": "^1.4.4"
   },
   "devDependencies": {
-    "@stackit/db": "workspace:*",
-    "@stackit/eslint-config": "workspace:*",
-    "@stackit/tsconfig": "workspace:*",
+    "@brand-radar/db": "workspace:*",
+    "@brand-radar/eslint-config": "workspace:*",
+    "@brand-radar/tsconfig": "workspace:*",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3"
   }

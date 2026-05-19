@@ -1,5 +1,5 @@
 import process from 'node:process'
-import { apiEnvSchema } from '@stackit/validations'
+import { apiEnvSchema } from '@brand-radar/validations'
 
 const parsed = apiEnvSchema.safeParse(process.env)
 

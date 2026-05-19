@@ -1,6 +1,6 @@
 // OPTIONAL — pruned by `pnpm setup` if better-auth declined.
-import { createAuth } from '@stackit/auth'
-import { createDatabaseClient } from '@stackit/db'
+import { createAuth } from '@brand-radar/auth'
+import { createDatabaseClient } from '@brand-radar/db'
 import { env } from '../config/env.js'
 
 const db = createDatabaseClient({ url: env.DATABASE_URL })

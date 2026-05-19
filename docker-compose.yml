@@ -25,7 +25,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-stackit}
+      POSTGRES_DB: ${POSTGRES_DB:-brand-radar}
     ports:
       - "5432:5432"
     volumes:
@@ -62,7 +62,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-stackit}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       API_HOST: 0.0.0.0
@@ -80,10 +80,10 @@ services:
       watch:
         - path: ./apps/api/src
           action: sync
-          target: /stackit/apps/api/src
+          target: /brand-radar/apps/api/src
         - path: ./packages
           action: sync
-          target: /stackit/packages
+          target: /brand-radar/packages
         - path: ./apps/api/package.json
           action: rebuild
 
@@ -105,7 +105,7 @@ services:
       watch:
         - path: ./apps/web/src
           action: sync
-          target: /stackit/apps/web/src
+          target: /brand-radar/apps/web/src
         - path: ./apps/web/package.json
           action: rebuild
 

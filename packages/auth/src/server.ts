@@ -1,5 +1,5 @@
-import type { DatabaseClient } from '@stackit/db'
-import { accounts, sessions, users, verifications } from '@stackit/db'
+import type { DatabaseClient } from '@brand-radar/db'
+import { accounts, sessions, users, verifications } from '@brand-radar/db'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 

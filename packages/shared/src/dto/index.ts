@@ -1,1 +1,1 @@
-// Data Transfer Objects will be exported here
+export * from './index'

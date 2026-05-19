@@ -1,5 +1,5 @@
 {
-  "name": "@stackit/cache",
+  "name": "@brand-radar/cache",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -17,8 +17,8 @@
     "redis": "^5.10.0"
   },
   "devDependencies": {
-    "@stackit/eslint-config": "workspace:*",
-    "@stackit/tsconfig": "workspace:*",
+    "@brand-radar/eslint-config": "workspace:*",
+    "@brand-radar/tsconfig": "workspace:*",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3"
   }

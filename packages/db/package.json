@@ -1,5 +1,5 @@
 {
-  "name": "@stackit/db",
+  "name": "@brand-radar/db",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -25,8 +25,8 @@
     "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "@stackit/eslint-config": "workspace:*",
-    "@stackit/tsconfig": "workspace:*",
+    "@brand-radar/eslint-config": "workspace:*",
+    "@brand-radar/tsconfig": "workspace:*",
     "@types/node": "^24.10.1",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.0",

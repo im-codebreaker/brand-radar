@@ -1,31 +1,28 @@
 {
-  "name": "stackit",
+  "name": "brand-radar",
   "version": "0.1.0",
   "private": true,
   "description": "Stack it your way — minimal full-stack starter (Vue 3 + Fastify + Drizzle)",
   "packageManager": "pnpm@10.33.0",
   "type": "module",
   "scripts": {
-    "setup": "tsx scripts/init.ts",
     "dev": "pnpm -r --parallel --filter './apps/*' run dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "lint:fix": "pnpm -r run lint:fix",
     "test": "pnpm -r run test",
     "type-check": "pnpm -r run type-check",
-    "db:generate": "pnpm --filter @stackit/db run db:generate",
-    "db:migrate": "pnpm --filter @stackit/db run db:migrate",
-    "db:push": "pnpm --filter @stackit/db run db:push",
-    "db:reset": "pnpm --filter @stackit/db run db:reset",
-    "db:seed": "pnpm --filter @stackit/db run db:seed",
-    "db:studio": "pnpm --filter @stackit/db run db:studio"
+    "db:generate": "pnpm --filter @brand-radar/db run db:generate",
+    "db:migrate": "pnpm --filter @brand-radar/db run db:migrate",
+    "db:push": "pnpm --filter @brand-radar/db run db:push",
+    "db:reset": "pnpm --filter @brand-radar/db run db:reset",
+    "db:seed": "pnpm --filter @brand-radar/db run db:seed",
+    "db:studio": "pnpm --filter @brand-radar/db run db:studio"
   },
   "devDependencies": {
-    "@clack/prompts": "^0.11.0",
     "@types/node": "^24.12.2",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "yaml": "^2.7.0"
+    "typescript": "^5.9.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

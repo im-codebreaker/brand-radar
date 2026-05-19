@@ -1,5 +1,5 @@
 {
-  "extends": "@stackit/tsconfig/node.json",
+  "extends": "@brand-radar/tsconfig/node.json",
   "compilerOptions": {
     "baseUrl": ".",
     "module": "NodeNext",

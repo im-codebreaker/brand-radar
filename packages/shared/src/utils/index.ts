@@ -1,3 +1,3 @@
-export * from './object.js'
-export * from './result.js'
-export * from './string.js'
+export * from './object'
+export * from './result'
+export * from './string'

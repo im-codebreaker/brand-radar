@@ -1,5 +1,5 @@
 // OPTIONAL — pruned by `pnpm setup` if Redis declined.
-import { createCacheClient } from '@stackit/cache'
+import { createCacheClient } from '@brand-radar/cache'
 import fp from 'fastify-plugin'
 import { env } from '../../config/env.js'
 

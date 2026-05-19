@@ -1,5 +1,5 @@
-import type { User } from '@stackit/types'
-import type { CreateUserInput } from '@stackit/validations/users/requests'
+import type { User } from '@brand-radar/types'
+import type { CreateUserInput } from '@brand-radar/validations/users/requests'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '@/lib/api'

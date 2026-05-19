@@ -1,13 +1,13 @@
 /* eslint-disable perfectionist/sort-imports */
 // Import order is load-bearing: REDIS_AUGMENT / AUTH_AUGMENT marker blocks
 // are removed independently by `pnpm setup` if those modules are declined.
-import type { DatabaseClient } from '@stackit/db'
+import type { DatabaseClient } from '@brand-radar/db'
 import type { createUsersRepository } from '../repositories/users.js'
 // REDIS_AUGMENT_START
-import type { RedisClientType } from '@stackit/cache'
+import type { RedisClientType } from '@brand-radar/cache'
 // REDIS_AUGMENT_END
 // AUTH_AUGMENT_START
-import type { createAuth } from '@stackit/auth'
+import type { createAuth } from '@brand-radar/auth'
 // AUTH_AUGMENT_END
 
 declare module 'fastify' {

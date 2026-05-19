@@ -1,4 +1,4 @@
-# stackit
+# brand-radar
 
 > Stack it your way — minimal full-stack starter (Vue 3 + Fastify + Drizzle).
 
@@ -21,7 +21,7 @@ A clean, opinionated, modular pnpm monorepo for shipping a full-stack app fast.
 **Local dev (recommended)** — apps run on host, infra in docker:
 
 ```bash
-git clone git@github.com:im-codebreaker/stackit.git my-app
+git clone git@github.com:im-codebreaker/brand-radar.git my-app
 cd my-app
 pnpm install
 pnpm setup                              # interactive — pick optional modules + project name
@@ -46,17 +46,17 @@ API health: <http://localhost/api/v1/health> · OpenAPI docs: <http://localhost/
 ## Structure
 
 ```
-stackit/
+brand-radar/
 ├── apps/
 │   ├── api/                    Fastify backend (Zod-validated, autoloaded plugins/routes)
 │   └── web/                    Vue 3 SPA (Pinia, Vue Router, Tailwind v4)
 ├── packages/
-│   ├── validations/            @stackit/validations — Zod schemas (source of truth)
-│   ├── types/                  @stackit/types       — pure TS types & API envelopes
-│   ├── db/                     @stackit/db          — Drizzle client + schema
-│   ├── cache/                  @stackit/cache       — Redis client (optional)
-│   ├── auth/                   @stackit/auth        — better-auth wrapper (optional)
-│   ├── helpers/                @stackit/helpers     — shared utilities
+│   ├── validations/            @brand-radar/validations — Zod schemas (source of truth)
+│   ├── types/                  @brand-radar/types       — pure TS types & API envelopes
+│   ├── db/                     @brand-radar/db          — Drizzle client + schema
+│   ├── cache/                  @brand-radar/cache       — Redis client (optional)
+│   ├── auth/                   @brand-radar/auth        — better-auth wrapper (optional)
+│   ├── helpers/                @brand-radar/helpers     — shared utilities
 │   └── config/
 │       ├── tsconfig/           shared tsconfigs (base, node, web, vitest)
 │       └── eslint-config/      shared ESLint config (wraps @antfu/eslint-config)

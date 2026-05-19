@@ -13,11 +13,11 @@ const db = createDatabaseClient({ url: databaseUrl })
 async function main() {
   const [demo] = await db
     .insert(users)
-    .values({ email: 'demo@stackit.dev', name: 'Demo User' })
+    .values({ email: 'demo@brand-radar.dev', name: 'Demo User' })
     .onConflictDoNothing({ target: users.email })
     .returning()
 
-  console.warn(`Seeded user: ${demo?.email ?? 'demo@stackit.dev (already existed)'}`)
+  console.warn(`Seeded user: ${demo?.email ?? 'demo@brand-radar.dev (already existed)'}`)
 }
 
 main()

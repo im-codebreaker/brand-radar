@@ -1,6 +1,6 @@
-import type { DatabaseClient, DbClient, User } from '@stackit/db'
-import type { CreateUserInput, UpdateUserInput } from '@stackit/validations/users/requests'
-import { users } from '@stackit/db'
+import type { DatabaseClient, DbClient, User } from '@brand-radar/db'
+import type { CreateUserInput, UpdateUserInput } from '@brand-radar/validations/users/requests'
+import { users } from '@brand-radar/db'
 import { eq, sql } from 'drizzle-orm'
 
 export function createUsersRepository(db: DatabaseClient) {

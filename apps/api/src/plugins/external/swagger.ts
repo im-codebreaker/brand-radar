@@ -7,7 +7,7 @@ export default fp(async (fastify) => {
   await fastify.register(swagger, {
     openapi: {
       info: {
-        title: 'stackit API',
+        title: 'brand-radar API',
         description: 'Minimal full-stack starter — Vue 3 + Fastify + Drizzle',
         version: '0.1.0',
       },

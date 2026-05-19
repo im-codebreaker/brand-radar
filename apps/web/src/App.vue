@@ -7,7 +7,7 @@ import { RouterLink, RouterView } from 'vue-router'
     <header class="border-b border-slate-200 dark:border-slate-800">
       <nav class="mx-auto flex max-w-5xl items-center gap-6 px-6 py-4">
         <RouterLink to="/" class="text-lg font-semibold">
-          stackit
+          brand-radar
         </RouterLink>
         <RouterLink to="/users" class="text-sm hover:underline">
           Users

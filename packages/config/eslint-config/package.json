@@ -1,5 +1,5 @@
 {
-  "name": "@stackit/eslint-config",
+  "name": "@brand-radar/eslint-config",
   "version": "0.1.0",
   "private": true,
   "type": "module",

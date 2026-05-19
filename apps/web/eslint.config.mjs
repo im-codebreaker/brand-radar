@@ -1,3 +1,3 @@
-import config from '@stackit/eslint-config'
+import config from '@brand-radar/eslint-config'
 
 export default config({ vue: true })
