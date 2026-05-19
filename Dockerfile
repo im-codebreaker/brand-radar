@@ -20,7 +20,7 @@ ENTRYPOINT ["/sbin/tini", "--"]
 # or packages/auth.
 ###################################################
 FROM base AS deps
-COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
