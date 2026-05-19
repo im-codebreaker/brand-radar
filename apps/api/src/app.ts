@@ -38,5 +38,10 @@ export async function build(opts: Record<string, unknown> = {}) {
     options: { prefix: '/api/v1' },
   })
 
+  await app.register(autoLoad, {
+    dir: join(__dirname, 'routes'),
+    options: { prefix: '/api/v1' },
+  })
+
   return app
 }
