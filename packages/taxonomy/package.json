@@ -1,0 +1,21 @@
+{
+  "name": "@brand-radar/taxonomy",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./categories": "./src/categories/index.ts",
+    "./styles": "./src/styles/index.ts",
+    "./classifiers": "./src/classifiers/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@brand-radar/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@brand-radar/config": "workspace:*",
+    "typescript": "^5.7.3"
+  }
+}
