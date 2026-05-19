@@ -48,33 +48,41 @@ API health: <http://localhost/api/v1/health> · OpenAPI docs: <http://localhost/
 ```
 brand-radar/
 ├── apps/
-│   ├── api/                    Fastify backend (Zod-validated, autoloaded plugins/routes)
-│   └── web/                    Vue 3 SPA (Pinia, Vue Router, Tailwind v4)
+│   ├── api/                    Fastify API Gateway (domain modules)
+│   ├── web/                    Vue 3 SPA (discovery, search, trends)
+│   ├── workers/                Background workers (crawl, social, AI)
+│   └── scheduler/              Job scheduling (BullMQ + cron)
 ├── packages/
-│   ├── validations/            @brand-radar/validations — Zod schemas (source of truth)
-│   ├── types/                  @brand-radar/types       — pure TS types & API envelopes
-│   ├── db/                     @brand-radar/db          — Drizzle client + schema
-│   ├── cache/                  @brand-radar/cache       — Redis client (optional)
-│   ├── auth/                   @brand-radar/auth        — better-auth wrapper (optional)
-│   ├── helpers/                @brand-radar/helpers     — shared utilities
+│   ├── shared/                 @brand-radar/shared       — consolidated types, schemas, utils
+│   ├── db/                     @brand-radar/db           — Drizzle ORM + PostgreSQL
+│   ├── redis/                  @brand-radar/redis        — Redis client + BullMQ queues
+│   ├── search/                 @brand-radar/search       — OpenSearch client
+│   ├── ai/                     @brand-radar/ai           — AI/ML/NLP/embeddings
+│   ├── taxonomy/               @brand-radar/taxonomy     — Brand classification
+│   ├── auth/                   @brand-radar/auth         — better-auth wrapper
 │   └── config/
-│       ├── tsconfig/           shared tsconfigs (base, node, web, vitest)
-│       └── eslint-config/      shared ESLint config (wraps @antfu/eslint-config)
-├── infrastructure/             nginx config; reserved for k8s/terraform
-├── scripts/init.ts             post-clone setup (pnpm setup) — self-deletes
-├── docker-compose.yml          traefik + postgres + redis + api + web
-└── Dockerfile                  multi-stage: deps → api/web {build,dev,prod}
+│       ├── tsconfig/           shared TypeScript configs
+│       └── eslint-config/      shared ESLint config
+├── infrastructure/             nginx config
+├── docker-compose.yml          postgres + redis + opensearch + api + web + workers + scheduler
+└── Dockerfile                  multi-stage: deps → apps {build, dev, prod}
 ```
+
+## Services
+
+- **PostgreSQL** (pgvector) - Primary database with vector embeddings
+- **Redis** - Cache + BullMQ job queues
+- **OpenSearch** - Full-text and semantic search
 
 ## Validation flow (Zod, end to end)
 
-1. Define a schema once in `packages/validations/src/<domain>/`.
+1. Define a schema once in `packages/shared/src/<domain>/`.
 2. Fastify route uses it via `fastify-type-provider-zod` — request/response inferred.
 3. Vue form imports the same schema and validates with the `useZodForm` composable.
 4. OpenAPI docs are generated from the schemas automatically.
 
 ```ts
-// packages/validations/src/users/requests.ts
+// packages/shared/src/users/requests.ts
 export const CreateUserSchema = z.object({ email: z.email(), name: z.string().min(1) })
 
 // apps/api/src/routes/users.ts
@@ -115,7 +123,7 @@ The `pnpm setup` script asks at install time. Each module is structured so that 
 
 | Module     | Removed if declined                                                              |
 | ---------- | -------------------------------------------------------------------------------- |
-| Redis      | `packages/cache/`, `apps/api/src/plugins/app/redis.ts`, redis service in compose |
+| Redis      | `packages/redis/`, `apps/api/src/plugins/app/redis.ts`, redis service in compose |
 | better-auth | `packages/auth/`, auth plugin/route/lib, login view, auth store, auth schema     |
 
 Re-enabling a module after removal: copy it from this template's git history, or just `pnpm add` and rebuild from scratch.
