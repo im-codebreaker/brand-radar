@@ -12,6 +12,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@brand-radar/auth": "workspace:*",
     "@brand-radar/shared": "workspace:*",
     "@rebnd/ui": "^0.0.7",
     "pinia": "^2.3.0",

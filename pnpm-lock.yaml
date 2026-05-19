@@ -139,6 +139,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@brand-radar/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@brand-radar/shared':
         specifier: workspace:*
         version: link:../../packages/shared
