@@ -1,0 +1,21 @@
+{
+  "name": "@brand-radar/ai",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./embeddings": "./src/embeddings/index.ts",
+    "./nlp": "./src/nlp/index.ts",
+    "./models": "./src/models/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openai": "^4.77.3"
+  },
+  "devDependencies": {
+    "@brand-radar/config": "workspace:*",
+    "typescript": "^5.7.3"
+  }
+}
