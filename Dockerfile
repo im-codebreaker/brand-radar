@@ -11,28 +11,42 @@ ENV CI=true \
 ENTRYPOINT ["/sbin/tini", "--"]
 
 ###################################################
-# Deps — install workspace deps with frozen lockfile
-#
-# Uses `pnpm fetch` so we only need the lockfile to populate the
-# store. Then we copy source and run `pnpm install --offline`,
-# which works regardless of which optional packages exist —
-# important because `pnpm setup` may have pruned packages/cache
-# or packages/auth.
+# Dependencies — install all workspace deps
 ###################################################
-FROM base AS deps
+FROM base AS dependencies
+# Copy package files for better layer caching
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
-COPY . .
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
+
+# Copy package.json from each workspace package
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/db/package.json ./packages/db/
+COPY packages/redis/package.json ./packages/redis/
+COPY packages/search/package.json ./packages/search/
+COPY packages/ai/package.json ./packages/ai/
+COPY packages/taxonomy/package.json ./packages/taxonomy/
+COPY packages/auth/package.json ./packages/auth/
+COPY packages/config/eslint-config/package.json ./packages/config/eslint-config/
+COPY packages/config/tsconfig/package.json ./packages/config/tsconfig/
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+COPY apps/workers/package.json ./apps/workers/
+COPY apps/scheduler/package.json ./apps/scheduler/
+
+# Install ALL dependencies (dev + prod)
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+
+# Now copy source code
+COPY packages ./packages
+COPY apps ./apps
 
 ###################################################
 # API — build + dev + prod
 ###################################################
-FROM deps AS api-build
+FROM dependencies AS api-build
 ENV NODE_ENV=production
 RUN pnpm --filter @brand-radar/api run build
 
-FROM deps AS api-dev
+FROM dependencies AS api-dev
 ENV NODE_ENV=development
 WORKDIR /brand-radar/apps/api
 EXPOSE 3000
@@ -51,11 +65,11 @@ CMD ["node", "dist/server.js"]
 ###################################################
 # Web — build + dev + prod (nginx)
 ###################################################
-FROM deps AS web-build
+FROM dependencies AS web-build
 ENV NODE_ENV=production
 RUN pnpm --filter @brand-radar/web run build
 
-FROM deps AS web-dev
+FROM dependencies AS web-dev
 ENV NODE_ENV=development
 WORKDIR /brand-radar/apps/web
 EXPOSE 5173
@@ -69,12 +83,12 @@ EXPOSE 80
 ###################################################
 # Workers — build + dev + prod
 ###################################################
-FROM deps AS workers-dev
+FROM dependencies AS workers-dev
 ENV NODE_ENV=development
 WORKDIR /brand-radar/apps/workers
 CMD ["pnpm", "dev"]
 
-FROM deps AS workers-build
+FROM dependencies AS workers-build
 ENV NODE_ENV=production
 RUN pnpm --filter @brand-radar/workers run build
 
@@ -90,12 +104,12 @@ CMD ["node", "dist/bootstrap.js"]
 ###################################################
 # Scheduler — build + dev + prod
 ###################################################
-FROM deps AS scheduler-dev
+FROM dependencies AS scheduler-dev
 ENV NODE_ENV=development
 WORKDIR /brand-radar/apps/scheduler
 CMD ["pnpm", "dev"]
 
-FROM deps AS scheduler-build
+FROM dependencies AS scheduler-build
 ENV NODE_ENV=production
 RUN pnpm --filter @brand-radar/scheduler run build
 

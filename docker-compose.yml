@@ -1,26 +1,17 @@
 services:
   ###################################################
-  # Reverse proxy — Traefik on :80 with auto-discovery
-  #   /      → web (Vite dev server, port 5173)
-  #   /api/  → api (Fastify, port 3000)
-  #   Dashboard at http://localhost:8080
+  # Traefik Proxy - SIMPLE VERSION
   ###################################################
-  traefik:
-    image: traefik:3.2
-    container_name: brand-radar-traefik
+  proxy:
+    image: traefik:v3.2
     command:
       - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
-      - "--entrypoints.web.address=:80"
-      - "--log.level=INFO"
+      - "--providers.docker"
     ports:
       - "80:80"
-      - "8080:8080"  # Traefik dashboard
+      - "8080:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: unless-stopped
+      - /var/run/docker.sock:/var/run/docker.sock
 
   ###################################################
   # PostgreSQL
@@ -110,9 +101,8 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-in-production-please}
       BETTER_AUTH_URL: http://localhost
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=PathPrefix(`/api`) || PathPrefix(`/docs`)"
-      - "traefik.http.services.api.loadbalancer.server.port=3000"
+      traefik.http.routers.api.rule: Host(`localhost`) && PathPrefix(`/api`)
+      traefik.http.services.api.loadbalancer.server.port: 3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -209,10 +199,8 @@ services:
       VITE_API_URL: /api
       VITE_API_PROXY_TARGET: http://api:3000
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.web.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.web.priority=1"
-      - "traefik.http.services.web.loadbalancer.server.port=5173"
+      traefik.http.routers.web.rule: Host(`localhost`)
+      traefik.http.services.web.loadbalancer.server.port: 5173
     depends_on:
       - api
     develop:
