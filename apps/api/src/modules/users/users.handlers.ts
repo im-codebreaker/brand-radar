@@ -1,5 +1,5 @@
+import type * as schemas from '@brand-radar/shared/schemas'
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import * as schemas from '@brand-radar/shared/schemas'
 import type { UsersService } from './users.service.js'
 
 type CreateUserInput = schemas.users.CreateUserInput
@@ -14,7 +14,6 @@ export function createUserHandlers(service: UsersService) {
 
     async getById(
       request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply,
     ) {
       const user = await service.getUserById(request.params.id)
       return { user }
@@ -30,7 +29,6 @@ export function createUserHandlers(service: UsersService) {
 
     async update(
       request: FastifyRequest<{ Params: { id: string }, Body: UpdateUserInput }>,
-      reply: FastifyReply,
     ) {
       const user = await service.updateUser(request.params.id, request.body)
       return { user }
