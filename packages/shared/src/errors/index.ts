@@ -1,1 +1,2 @@
-export * from './index'
+// Placeholder for future exports
+export {}
