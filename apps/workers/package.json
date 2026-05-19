@@ -6,6 +6,8 @@
     "dev": "tsx watch src/bootstrap.ts",
     "start": "tsx src/bootstrap.ts",
     "build": "tsc",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

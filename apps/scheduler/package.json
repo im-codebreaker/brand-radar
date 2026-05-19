@@ -6,6 +6,8 @@
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",
     "build": "tsc",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
