@@ -1,0 +1,22 @@
+{
+  "name": "@brand-radar/search",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./indexes": "./src/indexes/index.ts",
+    "./queries": "./src/queries/index.ts",
+    "./sync": "./src/sync/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opensearch-project/opensearch": "^2.15.0"
+  },
+  "devDependencies": {
+    "@brand-radar/config": "workspace:*",
+    "typescript": "^5.7.3"
+  }
+}
