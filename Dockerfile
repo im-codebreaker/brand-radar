@@ -65,3 +65,45 @@ FROM nginx:alpine AS web-prod
 COPY --from=web-build /brand-radar/apps/web/dist /usr/share/nginx/html
 COPY infrastructure/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
+
+###################################################
+# Workers — build + dev + prod
+###################################################
+FROM deps AS workers-dev
+ENV NODE_ENV=development
+WORKDIR /brand-radar/apps/workers
+CMD ["pnpm", "dev"]
+
+FROM deps AS workers-build
+ENV NODE_ENV=production
+RUN pnpm --filter @brand-radar/workers run build
+
+FROM node:24-alpine AS workers-prod
+RUN apk add --no-cache tini && corepack enable && corepack prepare pnpm@10.33.0 --activate
+WORKDIR /brand-radar
+ENV NODE_ENV=production
+COPY --from=workers-build /brand-radar /brand-radar
+WORKDIR /brand-radar/apps/workers
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "dist/bootstrap.js"]
+
+###################################################
+# Scheduler — build + dev + prod
+###################################################
+FROM deps AS scheduler-dev
+ENV NODE_ENV=development
+WORKDIR /brand-radar/apps/scheduler
+CMD ["pnpm", "dev"]
+
+FROM deps AS scheduler-build
+ENV NODE_ENV=production
+RUN pnpm --filter @brand-radar/scheduler run build
+
+FROM node:24-alpine AS scheduler-prod
+RUN apk add --no-cache tini && corepack enable && corepack prepare pnpm@10.33.0 --activate
+WORKDIR /brand-radar
+ENV NODE_ENV=production
+COPY --from=scheduler-build /brand-radar /brand-radar
+WORKDIR /brand-radar/apps/scheduler
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "dist/main.js"]
