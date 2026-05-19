@@ -17,9 +17,16 @@
     "@brand-radar/search": "workspace:*",
     "@brand-radar/shared": "workspace:*",
     "@brand-radar/taxonomy": "workspace:*",
+    "@xenova/transformers": "^2.17.2",
     "bullmq": "^5.34.1",
     "cheerio": "^1.0.0",
-    "playwright": "^1.49.1"
+    "fast-fuzzy": "^1.12.0",
+    "ky": "^1.7.3",
+    "p-limit": "^7.0.0",
+    "playwright": "^1.49.1",
+    "proxy-agent": "^6.5.0",
+    "robots-parser": "^3.0.1",
+    "user-agents": "^1.1.373"
   },
   "devDependencies": {
     "@brand-radar/eslint-config": "workspace:*",

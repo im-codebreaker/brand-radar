@@ -1,5 +1,5 @@
 import type { DatabaseClient, DbClient, User } from '@brand-radar/db'
-import * as schemas from '@brand-radar/shared/schemas'
+import type * as schemas from '@brand-radar/shared/schemas'
 import { users } from '@brand-radar/db'
 import { eq, sql } from 'drizzle-orm'
 

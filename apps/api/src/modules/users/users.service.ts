@@ -1,6 +1,6 @@
-import * as schemas from '@brand-radar/shared/schemas'
-import { ConflictError, NotFoundError } from '../../lib/errors.js'
+import type * as schemas from '@brand-radar/shared/schemas'
 import type { UsersRepository } from './users.repository.js'
+import { ConflictError, NotFoundError } from '../../lib/errors.js'
 
 type CreateUserInput = schemas.users.CreateUserInput
 type UpdateUserInput = schemas.users.UpdateUserInput
