@@ -3,12 +3,12 @@ services:
   # Traefik Proxy - SIMPLE VERSION
   ###################################################
   proxy:
-    image: traefik:v3.1
+    image: traefik:v3.0
     command:
       - "--api.insecure=true"
-      - "--providers.docker"
-    environment:
-      - DOCKER_API_VERSION=1.45
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
       - "8080:8080"
@@ -103,8 +103,9 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-in-production-please}
       BETTER_AUTH_URL: http://localhost
     labels:
-      traefik.http.routers.api.rule: Host(`localhost`) && PathPrefix(`/api`)
-      traefik.http.services.api.loadbalancer.server.port: 3000
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -201,8 +202,9 @@ services:
       VITE_API_URL: /api
       VITE_API_PROXY_TARGET: http://api:3000
     labels:
-      traefik.http.routers.web.rule: Host(`localhost`)
-      traefik.http.services.web.loadbalancer.server.port: 5173
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`localhost`)"
+      - "traefik.http.services.web.loadbalancer.server.port=5173"
     depends_on:
       - api
     develop:
