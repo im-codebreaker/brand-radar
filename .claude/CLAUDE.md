@@ -139,6 +139,29 @@ For the full spec, scope decisions, and breaking-change handling, see [`./docs/c
 | Pinia stores | `*.ts` in `stores/` | `auth.ts`, `users.ts` |
 | Composables | `use*` prefix | `useZodForm` |
 
+### Comments
+
+**Default to zero comments.** Only add a comment when the code is not clear and descriptive on its own.
+
+- Well-named functions, variables, and types should make the code self-documenting
+- If you need a comment to explain WHAT the code does, the code needs better naming
+- Only comment the WHY when it's non-obvious: hidden constraints, subtle invariants, workarounds for specific bugs
+- Do not add file headers, method descriptions that repeat the method name, or inline comments describing obvious operations
+
+Examples of useless comments to avoid:
+```ts
+// Get user by ID
+async getUserById(id: string) { ... }
+
+// Create service from repository
+const service = createUsersService(repo)
+
+// Business rule: email must be unique
+if (existing) throw new ConflictError('Email already in use')
+```
+
+The code is already clear — the comments add no value.
+
 ### TypeScript
 
 - `strict: true`. Never `any`. Use `unknown` and narrow.
@@ -163,22 +186,70 @@ export default fp(async (fastify) => {
 
 Removing a feature is just deleting its plugin file — autoload picks up the rest.
 
-### Routes & Handlers & Repositories
+### DDD Module Structure
 
-- Route file in `apps/api/src/routes/<feature>.ts` exports `autoPrefix = '/feature'`.
-- Handler factory in `apps/api/src/handlers/<feature>.ts` takes a repository, returns route handlers.
-- Repository factory in `apps/api/src/repositories/<feature>.ts` takes the `DatabaseClient`, returns query methods. Each method accepts an optional `tx?: DbClient` so it can participate in an outer transaction.
+Each domain lives in `apps/api/src/modules/<feature>/` with clean architecture layers:
+
+```
+modules/users/
+├── users.routes.ts      # Fastify plugin, exports autoPrefix = '/users'
+├── users.handlers.ts    # HTTP layer — request/response, status codes
+├── users.service.ts     # Business logic — validation, orchestration
+└── users.repository.ts  # Data access — Drizzle queries, transactions
+```
+
+**Dependency flow**: routes → handlers → service → repository
+
+**Repository pattern**: Each method accepts an optional `tx?: DbClient` for transaction support:
 
 ```ts
-// repository — typed against Drizzle, transactions optional
 export function createUsersRepository(db: DatabaseClient) {
   return {
     async findById(id: string, tx?: DbClient): Promise<User | undefined> {
       return (tx ?? db).query.users.findFirst({ where: eq(users.id, id) })
     },
-    // ...
   }
 }
+```
+
+**Service pattern**: Business logic and domain errors (NotFoundError, ConflictError):
+
+```ts
+export function createUsersService(repo: UsersRepository) {
+  return {
+    async createUser(data: CreateUserInput) {
+      const existing = await repo.findByEmail(data.email)
+      if (existing) throw new ConflictError('Email already in use')
+      return repo.create(data)
+    },
+  }
+}
+```
+
+**Handler pattern**: HTTP concerns only, no business logic:
+
+```ts
+export function createUserHandlers(service: UsersService) {
+  return {
+    async create(request: FastifyRequest<{ Body: CreateUserInput }>, reply: FastifyReply) {
+      const user = await service.createUser(request.body)
+      return reply.code(201).send({ user })
+    },
+  }
+}
+```
+
+**Routes pattern**: Wire service and handlers, register routes:
+
+```ts
+const plugin: FastifyPluginAsyncZod = async (fastify) => {
+  const service = createUsersService(fastify.usersRepository)
+  const handlers = createUserHandlers(service)
+  
+  fastify.post('/', { schema: users.routes.createUserRoute }, handlers.create)
+}
+export default plugin
+export const autoPrefix = '/users'
 ```
 
 ### Validation
@@ -247,10 +318,12 @@ Delegate to subagents when the task is domain-specific. Each agent encodes proje
 1. Define Zod schemas in `packages/validations/src/projects/{requests,responses,routes}.ts`.
 2. Add Drizzle table in `packages/db/src/schema/projects.ts` and re-export from `schema/index.ts`.
 3. Run `pnpm db:generate` then `pnpm db:push` (or `db:migrate` in prod).
-4. Create repository in `apps/api/src/repositories/projects.ts` (factory + optional `tx`).
-5. Expose it via the `repositories` plugin (`apps/api/src/plugins/app/repositories.ts`) and add the decorator type in `apps/api/src/types/fastify.d.ts`.
-6. Add handlers in `apps/api/src/handlers/projects.ts`.
-7. Wire routes in `apps/api/src/routes/projects.ts` with `autoPrefix = '/projects'`.
+4. Create module directory: `apps/api/src/modules/projects/`
+5. Create repository: `modules/projects/projects.repository.ts` (factory + optional `tx`).
+6. Expose via `repositories` plugin (`apps/api/src/plugins/core/repositories.ts`) and add decorator type in `apps/api/src/types/fastify.d.ts`.
+7. Create service: `modules/projects/projects.service.ts` (business logic, domain errors).
+8. Create handlers: `modules/projects/projects.handlers.ts` (HTTP layer only).
+9. Create routes: `modules/projects/projects.routes.ts` with `autoPrefix = '/projects'`.
 
 ### Adding a new Vue page
 
