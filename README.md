@@ -39,7 +39,7 @@ cp .env.example .env
 docker compose up --build --watch       # nginx, postgres, redis, api, web
 ```
 
-Open <http://localhost>. An nginx proxy on `:80` routes `/` → Vite, `/api` → Fastify, `/docs` → Swagger UI. The api and web containers also expose `:3000` and `:5173` directly if you prefer.
+Open <http://localhost>. Traefik on `:80` routes `/` → Vite, `/api` → Fastify, `/docs` → Swagger UI. Traefik dashboard: <http://localhost:8080>. The api and web containers also expose `:3000` and `:5173` directly if you prefer.
 
 API health: <http://localhost/api/v1/health> · OpenAPI docs: <http://localhost/docs>
 
