@@ -2,7 +2,7 @@
 // Import order is load-bearing: REDIS_AUGMENT / AUTH_AUGMENT marker blocks
 // are removed independently by `pnpm setup` if those modules are declined.
 import type { DatabaseClient } from '@brand-radar/db'
-import type { createUsersRepository } from '../repositories/users.js'
+import type { createUsersRepository } from '../modules/users/users.repository.js'
 // REDIS_AUGMENT_START
 import type { RedisClientType } from '@brand-radar/redis'
 // REDIS_AUGMENT_END

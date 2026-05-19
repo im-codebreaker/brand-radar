@@ -59,3 +59,5 @@ export function createUsersRepository(db: DatabaseClient) {
     },
   }
 }
+
+export type UsersRepository = ReturnType<typeof createUsersRepository>

@@ -1,10 +1,18 @@
 import type { FastifyError } from 'fastify'
 import fp from 'fastify-plugin'
 import { hasZodFastifySchemaValidationErrors, isResponseSerializationError } from 'fastify-type-provider-zod'
+import { DomainError } from '../../lib/errors.js'
 
 export default fp(async (fastify) => {
   fastify.setErrorHandler((rawErr, request, reply) => {
     const err = rawErr as FastifyError
+
+    // Domain errors (business logic errors with status codes)
+    if (err instanceof DomainError) {
+      return reply.code(err.statusCode).send({
+        message: err.message,
+      })
+    }
 
     if (hasZodFastifySchemaValidationErrors(err)) {
       return reply.code(400).send({

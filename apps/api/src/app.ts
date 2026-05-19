@@ -31,7 +31,8 @@ export async function build(opts: Record<string, unknown> = {}) {
   })
 
   await app.register(autoLoad, {
-    dir: join(__dirname, 'routes'),
+    dir: join(__dirname, 'modules'),
+    indexPattern: /.*routes\.(ts|js|cjs|mjs)$/,
     autoHooks: true,
     cascadeHooks: true,
     options: { prefix: '/api/v1' },
