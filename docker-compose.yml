@@ -6,16 +6,15 @@ services:
   #   Dashboard at http://localhost:8080
   ###################################################
   traefik:
-    image: traefik:v3.3
+    image: traefik:3.2
     container_name: brand-radar-traefik
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--entrypoints.web.address=:80"
       - "--log.level=INFO"
-    environment:
-      - DOCKER_API_VERSION=1.45
     ports:
       - "80:80"
       - "8080:8080"  # Traefik dashboard
