@@ -1,5 +1,5 @@
 {
-  "extends": "@brand-radar/config/tsconfig/node.json",
+  "extends": "@brand-radar/tsconfig/node.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src"

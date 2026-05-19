@@ -1,5 +1,5 @@
-import type { User } from '@brand-radar/types'
-import type { CreateUserInput } from '@brand-radar/validations/users/requests'
+import type { User } from '@brand-radar/shared/types'
+import type { CreateUserInput } from '@brand-radar/shared/schemas'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '@/lib/api'

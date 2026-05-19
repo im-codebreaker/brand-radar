@@ -1,5 +1,7 @@
 export * from './entity.js'
 export * from './params.js'
+export * from './requests.js'
+export * from './responses.js'
 export * as requests from './requests.js'
 export * as responses from './responses.js'
 export * as routes from './routes.js'

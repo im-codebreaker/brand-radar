@@ -5,7 +5,7 @@ import { env } from './config/env.js'
 
 const app = await build()
 
-closeWithGrace({ delay: env.CLOSE_GRACE_DELAY }, async ({ err }) => {
+closeWithGrace({ delay: env.CLOSE_GRACE_DELAY }, async ({ err }: { err?: Error }) => {
   if (err)
     app.log.error(err)
   await app.close()

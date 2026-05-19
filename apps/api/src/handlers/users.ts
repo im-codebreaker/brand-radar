@@ -1,5 +1,5 @@
-import type { CreateUserInput, UpdateUserInput } from '@brand-radar/validations/users/requests'
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import type { CreateUserInput, UpdateUserInput } from '@brand-radar/shared/schemas'
 import type { createUsersRepository } from '../repositories/users.js'
 
 export function createUserHandlers(repo: ReturnType<typeof createUsersRepository>) {

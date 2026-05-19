@@ -41,6 +41,9 @@ importers:
       '@fastify/cors':
         specifier: ^10.0.1
         version: 10.1.0
+      '@fastify/formbody':
+        specifier: ^8.0.1
+        version: 8.0.2
       '@fastify/helmet':
         specifier: ^12.0.1
         version: 12.0.1
@@ -62,6 +65,12 @@ importers:
       bullmq:
         specifier: ^5.34.1
         version: 5.76.10
+      close-with-grace:
+        specifier: ^2.1.0
+        version: 2.5.0
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(kysely@0.28.17)(postgres@3.4.9)
       fastify:
         specifier: ^5.2.0
         version: 5.8.5
@@ -78,6 +87,9 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../../packages/config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/config/tsconfig
       '@types/node':
         specifier: ^22.10.5
         version: 22.19.19
@@ -109,6 +121,9 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../../packages/config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/config/tsconfig
       '@types/cron':
         specifier: ^2.4.0
         version: 2.4.3
@@ -143,6 +158,9 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../../packages/config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/config/tsconfig
       '@vitejs/plugin-vue':
         specifier: ^5.2.1
         version: 5.2.4(vite@6.4.2(@types/node@24.12.4)(tsx@4.22.2)(yaml@2.9.0))(vue@3.5.34(typescript@5.9.3))
@@ -198,6 +216,9 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../../packages/config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/config/tsconfig
       '@types/node':
         specifier: ^22.10.5
         version: 22.19.19
@@ -217,6 +238,9 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../config/tsconfig
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -300,6 +324,12 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../config/tsconfig
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.19.19
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -313,6 +343,9 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../config/tsconfig
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -326,6 +359,9 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../config/tsconfig
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -339,6 +375,9 @@ importers:
       '@brand-radar/eslint-config':
         specifier: workspace:*
         version: link:../config/eslint-config
+      '@brand-radar/tsconfig':
+        specifier: workspace:*
+        version: link:../config/tsconfig
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -1189,6 +1228,9 @@ packages:
   '@fastify/fast-json-stringify-compiler@5.0.3':
     resolution: {integrity: sha512-uik7yYHkLr6fxd8hJSZ8c+xF4WafPK+XzneQDPU+D10r5X19GW8lJcom2YijX2+qtFF1ENJlHXKFM9ouXNJYgQ==}
 
+  '@fastify/formbody@8.0.2':
+    resolution: {integrity: sha512-84v5J2KrkXzjgBpYnaNRPqwgMsmY7ZDjuj0YVuMR3NXCJRCgKEZy/taSP1wUYGn0onfxJpLyRGDLa+NMaDJtnA==}
+
   '@fastify/forwarded@3.0.1':
     resolution: {integrity: sha512-JqDochHFqXs3C3Ml3gOY58zM7OqO9ENqPo0UqAjAjH8L01fRZqwX9iLeX34//kiJubF7r2ZQHtBRU36vONbLlw==}
 
@@ -1978,6 +2020,9 @@ packages:
   clean-regexp@1.0.0:
     resolution: {integrity: sha512-GfisEZEJvzKrmGWkvfhgzcz/BllN1USeqD2V6tg14OAOgaCD2Z/PUEuxnAZ/nPvmaHRG7a8y77p1T/IRQ4D1Hw==}
     engines: {node: '>=4'}
+
+  close-with-grace@2.5.0:
+    resolution: {integrity: sha512-MewUtZQU6N4YVHIne63zGtjIQzTINgr6lQp2Y0CutaCw2FsdYahW57dH1Wdz+aV5ipbBzEBZD5znwX2NooS+IA==}
 
   cluster-key-slot@1.1.2:
     resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
@@ -4451,6 +4496,11 @@ snapshots:
     dependencies:
       fast-json-stringify: 6.4.0
 
+  '@fastify/formbody@8.0.2':
+    dependencies:
+      fast-querystring: 1.1.2
+      fastify-plugin: 5.1.0
+
   '@fastify/forwarded@3.0.1': {}
 
   '@fastify/helmet@12.0.1':
@@ -5257,6 +5307,8 @@ snapshots:
   clean-regexp@1.0.0:
     dependencies:
       escape-string-regexp: 1.0.5
+
+  close-with-grace@2.5.0: {}
 
   cluster-key-slot@1.1.2: {}
 

@@ -15,7 +15,8 @@
     "openai": "^4.77.3"
   },
   "devDependencies": {
-    "@brand-radar/config": "workspace:*",
+    "@brand-radar/eslint-config": "workspace:*",
+    "@brand-radar/tsconfig": "workspace:*",
     "typescript": "^5.7.3"
   }
 }

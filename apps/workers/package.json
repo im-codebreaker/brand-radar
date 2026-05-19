@@ -19,7 +19,8 @@
     "playwright": "^1.49.1"
   },
   "devDependencies": {
-    "@brand-radar/config": "workspace:*",
+    "@brand-radar/eslint-config": "workspace:*",
+    "@brand-radar/tsconfig": "workspace:*",
     "@types/node": "^22.10.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"

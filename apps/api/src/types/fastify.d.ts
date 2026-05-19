@@ -4,7 +4,7 @@
 import type { DatabaseClient } from '@brand-radar/db'
 import type { createUsersRepository } from '../repositories/users.js'
 // REDIS_AUGMENT_START
-import type { RedisClientType } from '@brand-radar/cache'
+import type { RedisClientType } from '@brand-radar/redis'
 // REDIS_AUGMENT_END
 // AUTH_AUGMENT_START
 import type { createAuth } from '@brand-radar/auth'

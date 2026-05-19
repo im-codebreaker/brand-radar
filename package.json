@@ -20,7 +20,7 @@
     "db:studio": "turbo run db:studio --filter=@brand-radar/db"
   },
   "devDependencies": {
-    "@brand-radar/config": "workspace:*",
+    "@brand-radar/eslint-config": "workspace:*",
     "turbo": "^2.3.3"
   },
   "engines": {

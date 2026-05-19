@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RButton, RForm, RFormGroup, RInput } from '@rebnd/ui'
-import { users } from '@brand-radar/validations'
+import { users } from '@brand-radar/shared/schemas'
 import { onMounted, reactive } from 'vue'
 import { useUsersStore } from '@/stores/users'
 
@@ -31,7 +31,7 @@ onMounted(() => store.fetchAll())
         Users
       </h1>
       <p class="text-sm text-slate-600 dark:text-slate-400">
-        Demo CRUD using shared Zod schemas from <code>@brand-radar/validations</code>.
+        Demo CRUD using shared Zod schemas from <code>@brand-radar/shared</code>.
       </p>
     </div>
 

@@ -1,10 +1,10 @@
 // OPTIONAL — pruned by `pnpm setup` if Redis declined.
-import { createCacheClient } from '@brand-radar/cache'
+import { createRedisClient } from '@brand-radar/redis'
 import fp from 'fastify-plugin'
 import { env } from '../../config/env.js'
 
 export default fp(async (fastify) => {
-  const cache = createCacheClient({ host: env.REDIS_HOST, port: env.REDIS_PORT })
+  const cache = createRedisClient({ host: env.REDIS_HOST, port: env.REDIS_PORT })
 
   // Connect in the background — don't block server startup.
   // Commands queued before connection complete; failures surface via the `error` listener.
@@ -15,7 +15,7 @@ export default fp(async (fastify) => {
   fastify.decorate('cache', cache)
 
   fastify.addHook('onClose', async () => {
-    if (cache.isOpen)
+    if (cache.status === 'ready')
       await cache.quit()
   })
 }, { name: 'redis' })
