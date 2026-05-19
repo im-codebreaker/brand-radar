@@ -8,6 +8,7 @@ services:
   ###################################################
   proxy:
     image: nginx:alpine
+    container_name: brand-radar-proxy
     ports:
       - "80:80"
     volumes:
@@ -22,6 +23,7 @@ services:
   ###################################################
   postgres:
     image: postgres:16-alpine
+    container_name: brand-radar-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -37,10 +39,11 @@ services:
       retries: 5
 
   ###################################################
-  # Redis (optional — pruned by `pnpm setup` if declined)
+  # Redis
   ###################################################
   redis:
     image: redis:7-alpine
+    container_name: brand-radar-redis
     ports:
       - "6379:6379"
     volumes:
@@ -52,12 +55,42 @@ services:
       retries: 5
 
   ###################################################
+  # OpenSearch — full-text search engine
+  ###################################################
+  opensearch:
+    image: opensearchproject/opensearch:2
+    container_name: brand-radar-opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ###################################################
   # API — Fastify backend, also exposed directly on :3000
   ###################################################
   api:
     build:
       context: .
       target: api-dev
+    container_name: brand-radar-api
     ports:
       - "3000:3000"
     environment:
@@ -65,6 +98,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      OPENSEARCH_NODE: http://opensearch:9200
       API_HOST: 0.0.0.0
       API_PORT: 3000
       BASE_URL: http://localhost
@@ -75,6 +109,74 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    develop:
+      watch:
+        - path: ./apps/api/src
+          action: sync
+          target: /brand-radar/apps/api/src
+        - path: ./packages
+          action: sync
+          target: /brand-radar/packages
+        - path: ./apps/api/package.json
+          action: rebuild
+
+  ###################################################
+  # Workers — background job processors
+  ###################################################
+  workers:
+    build:
+      context: .
+      target: api-dev
+    container_name: brand-radar-workers
+    command: pnpm --filter @brand-radar/api worker
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OPENSEARCH_NODE: http://opensearch:9200
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    develop:
+      watch:
+        - path: ./apps/api/src
+          action: sync
+          target: /brand-radar/apps/api/src
+        - path: ./packages
+          action: sync
+          target: /brand-radar/packages
+        - path: ./apps/api/package.json
+          action: rebuild
+
+  ###################################################
+  # Scheduler — cron job manager
+  ###################################################
+  scheduler:
+    build:
+      context: .
+      target: api-dev
+    container_name: brand-radar-scheduler
+    command: pnpm --filter @brand-radar/api scheduler
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OPENSEARCH_NODE: http://opensearch:9200
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      opensearch:
         condition: service_healthy
     develop:
       watch:
@@ -94,6 +196,7 @@ services:
     build:
       context: .
       target: web-dev
+    container_name: brand-radar-web
     ports:
       - "5173:5173"
     environment:
@@ -112,3 +215,4 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  opensearch-data:
