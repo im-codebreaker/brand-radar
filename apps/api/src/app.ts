@@ -27,7 +27,7 @@ export async function build(opts: Record<string, unknown> = {}) {
   })
 
   await app.register(autoLoad, {
-    dir: join(__dirname, 'plugins/app'),
+    dir: join(__dirname, 'plugins/core'),
   })
 
   await app.register(autoLoad, {

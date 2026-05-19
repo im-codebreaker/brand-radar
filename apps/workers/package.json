@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/bootstrap.ts",
     "start": "tsx src/bootstrap.ts",
+    "build": "tsc",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

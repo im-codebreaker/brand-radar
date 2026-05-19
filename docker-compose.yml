@@ -129,9 +129,8 @@ services:
   workers:
     build:
       context: .
-      target: api-dev
+      target: workers-dev
     container_name: brand-radar-workers
-    command: pnpm --filter @brand-radar/api worker
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
@@ -147,13 +146,13 @@ services:
         condition: service_healthy
     develop:
       watch:
-        - path: ./apps/api/src
+        - path: ./apps/workers/src
           action: sync
-          target: /brand-radar/apps/api/src
+          target: /brand-radar/apps/workers/src
         - path: ./packages
           action: sync
           target: /brand-radar/packages
-        - path: ./apps/api/package.json
+        - path: ./apps/workers/package.json
           action: rebuild
 
   ###################################################
@@ -162,9 +161,8 @@ services:
   scheduler:
     build:
       context: .
-      target: api-dev
+      target: scheduler-dev
     container_name: brand-radar-scheduler
-    command: pnpm --filter @brand-radar/api scheduler
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
@@ -180,13 +178,13 @@ services:
         condition: service_healthy
     develop:
       watch:
-        - path: ./apps/api/src
+        - path: ./apps/scheduler/src
           action: sync
-          target: /brand-radar/apps/api/src
+          target: /brand-radar/apps/scheduler/src
         - path: ./packages
           action: sync
           target: /brand-radar/packages
-        - path: ./apps/api/package.json
+        - path: ./apps/scheduler/package.json
           action: rebuild
 
   ###################################################
