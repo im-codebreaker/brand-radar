@@ -3,10 +3,12 @@ services:
   # Traefik Proxy - SIMPLE VERSION
   ###################################################
   proxy:
-    image: traefik:v3.2
+    image: traefik:v3.1
     command:
       - "--api.insecure=true"
       - "--providers.docker"
+    environment:
+      - DOCKER_API_VERSION=1.45
     ports:
       - "80:80"
       - "8080:8080"
