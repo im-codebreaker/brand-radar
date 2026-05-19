@@ -1,0 +1,27 @@
+{
+  "name": "@brand-radar/workers",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/bootstrap.ts",
+    "start": "tsx src/bootstrap.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@brand-radar/ai": "workspace:*",
+    "@brand-radar/db": "workspace:*",
+    "@brand-radar/redis": "workspace:*",
+    "@brand-radar/search": "workspace:*",
+    "@brand-radar/shared": "workspace:*",
+    "@brand-radar/taxonomy": "workspace:*",
+    "bullmq": "^5.34.1",
+    "cheerio": "^1.0.0",
+    "playwright": "^1.49.1"
+  },
+  "devDependencies": {
+    "@brand-radar/config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
