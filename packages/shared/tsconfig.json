@@ -1,0 +1,4 @@
+{
+  "extends": "@brand-radar/tsconfig/node.json",
+  "include": ["src/**/*.ts"]
+}
