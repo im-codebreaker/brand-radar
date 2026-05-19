@@ -1,6 +1,9 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import type { CreateUserInput, UpdateUserInput } from '@brand-radar/shared/schemas'
+import * as schemas from '@brand-radar/shared/schemas'
 import type { createUsersRepository } from '../repositories/users.js'
+
+type CreateUserInput = schemas.users.CreateUserInput
+type UpdateUserInput = schemas.users.UpdateUserInput
 
 export function createUserHandlers(repo: ReturnType<typeof createUsersRepository>) {
   return {

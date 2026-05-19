@@ -1,7 +1,10 @@
 import type { DatabaseClient, DbClient, User } from '@brand-radar/db'
-import type { CreateUserInput, UpdateUserInput } from '@brand-radar/shared/schemas'
+import * as schemas from '@brand-radar/shared/schemas'
 import { users } from '@brand-radar/db'
 import { eq, sql } from 'drizzle-orm'
+
+type CreateUserInput = schemas.users.CreateUserInput
+type UpdateUserInput = schemas.users.UpdateUserInput
 
 export function createUsersRepository(db: DatabaseClient) {
   return {
