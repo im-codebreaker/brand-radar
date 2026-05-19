@@ -1,28 +1,20 @@
 {
   "name": "@brand-radar/redis",
-  "type": "module",
   "version": "0.1.0",
-  "private": true,
+  "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./queues": "./src/queues/index.ts"
   },
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
   "scripts": {
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "bullmq": "^5.34.1",
-    "ioredis": "^5.4.2",
-    "redis": "^5.10.0"
+    "ioredis": "^5.4.2"
   },
   "devDependencies": {
-    "@brand-radar/eslint-config": "workspace:*",
-    "@brand-radar/tsconfig": "workspace:*",
-    "eslint": "^9.39.1",
-    "typescript": "^5.9.3"
+    "@brand-radar/config": "workspace:*",
+    "typescript": "^5.7.3"
   }
 }
