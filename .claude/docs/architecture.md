@@ -1,268 +1,499 @@
-# stackit — Architecture
+# Brand Radar — System Architecture
 
-## System Diagram
+> A modular, pipeline-driven intelligence platform for discovering, resolving, and ranking emerging fashion and perfume brands from social platforms and the web.
+
+---
+
+## Table of Contents
+
+1. [System Overview](#system-overview)
+2. [High-Level Architecture](#high-level-architecture)
+3. [Pipeline Stages](#pipeline-stages)
+4. [Data Layer](#data-layer)
+5. [Frontend Architecture](#frontend-architecture)
+6. [Deployment Architecture](#deployment-architecture)
+7. [Key Design Principles](#key-design-principles)
+
+---
+
+## System Overview
+
+Brand Radar is a **full-stack intelligence platform** that discovers, resolves, enriches, and scores emerging brands. The system is organized around a **staged, queue-driven pipeline** that processes signals from multiple sources.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              STACKIT MONOREPO                               │
+│                            BRAND RADAR MONOREPO                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   ┌─────────────────────┐          ┌─────────────────────┐                  │
-│   │    @stackit/web     │          │    @stackit/api     │                  │
-│   │    (Vue 3 SPA)      │  HTTP    │  (Fastify 5)        │                  │
-│   │                     │ ──────►  │                     │                  │
-│   │  - Vue Router       │          │  - autoload         │                  │
-│   │  - Pinia            │          │  - Zod via          │                  │
-│   │  - Tailwind v4      │          │    type-provider    │                  │
-│   │  - useZodForm       │          │  - better-auth (opt)│                  │
-│   └──────────┬──────────┘          └──────────┬──────────┘                  │
-│              │                                │                             │
-│              │   @stackit/validations         │                             │
-│              └────────► (Zod, shared) ◄───────┘                             │
-│                                               │                             │
-│                                    ┌──────────┴──────────┐                  │
-│                                    │                     │                  │
-│                              ┌─────▼─────┐         ┌─────▼─────┐            │
-│                              │@stackit/db│         │@stackit/  │            │
-│                              │ (Drizzle) │         │   cache   │            │
-│                              │           │         │  (Redis)  │            │
-│                              └─────┬─────┘         └─────┬─────┘            │
-│                                    │                     │                  │
-└────────────────────────────────────┼─────────────────────┼──────────────────┘
-                                     │                     │
-                              ┌──────▼──────┐       ┌──────▼──────┐
-                              │ PostgreSQL  │       │    Redis    │
-                              │  Database   │       │    Cache    │
-                              │ (pgvector-  │       │             │
-                              │  ready)     │       │             │
-                              └─────────────┘       └─────────────┘
+│  ┌──────────────────────────────────┐  ┌────────────────────────────────┐  │
+│  │   @brand-radar/web               │  │   @brand-radar/api             │  │
+│  │   (Vue 3 SPA - Discovery UI)     │  │   (Fastify - Gateway)          │  │
+│  │                                  │  │                                │  │
+│  │  - Dashboard & Search             │  │  - REST API endpoints          │  │
+│  │  - Brand Discovery Feed           │  │  - Authentication             │  │
+│  │  - Trend Analysis View            │  │  - Swagger/OpenAPI            │  │
+│  │  - Pinia state management         │  │  - Error handling             │  │
+│  └──────────────────────────────────┘  └────────────────────────────────┘  │
+│         │                                        │                          │
+│         │                                        │                          │
+│         └─────────────────────┬──────────────────┘                          │
+│                               │                                            │
+│                    @brand-radar/validations                               │
+│                  (Shared Zod schemas — SOURCE OF TRUTH)                   │
+│                               │                                            │
+│                ┌──────────────┼──────────────┐                             │
+│                │              │              │                             │
+│         ┌──────▼─────┐  ┌─────▼──────┐  ┌──▼────────────┐                 │
+│         │ @brand-radar│  │ @brand-radar│  │ @brand-radar │                 │
+│         │     /db     │  │   /adapters │  │  /workers    │                 │
+│         │  (Drizzle)  │  │  (Scrapers) │  │  (BullMQ)    │                 │
+│         └─────┬───────┘  └─────┬──────┘  └──┬───────────┘                 │
+│               │                │             │                             │
+│         ┌─────▼────────────────▼─────────────▼──────┐                      │
+│         │  PostgreSQL + pgvector + Meilisearch      │                      │
+│         │  (Source of Truth, Search Index)           │                      │
+│         └─────────────────────────────────────────────┘                    │
+│                                                                             │
+│  ┌──────────────────┬────────────────────────┬──────────────────┐           │
+│  │    Redis         │     S3/MinIO           │   Observability  │           │
+│  │  (Job Queues)    │  (Raw Storage)         │  (Prometheus)    │           │
+│  └──────────────────┴────────────────────────┴──────────────────┘           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The key insight: **`@stackit/validations` is the contract**. Both api and web import the same Zod schemas; the schemas drive route validation, response serialization, OpenAPI generation, and form validation.
+---
 
-## Monorepo Structure
+## High-Level Architecture
+
+### Monorepo Structure
 
 ```
-stackit/
+brand-radar/
 ├── apps/
-│   ├── api/                    # @stackit/api - Fastify backend
+│   ├── api/                    # @brand-radar/api - Fastify API gateway
 │   │   └── src/
-│   │       ├── config/         # env loader (Zod-validated)
-│   │       ├── handlers/       # pure handler factories (take repositories)
-│   │       ├── lib/            # better-auth wrapper instance
-│   │       ├── plugins/
-│   │       │   ├── app/        # db, redis, auth, repositories, error-handler
-│   │       │   └── external/   # cors, helmet, rate-limit, swagger, sensible
-│   │       ├── repositories/   # Drizzle-typed factories
-│   │       ├── routes/         # autoloaded; export `autoPrefix`
+│   │       ├── plugins/        # external (cors, helmet, swagger) + app (db, auth)
+│   │       ├── routes/         # autoloaded API endpoints
 │   │       ├── types/          # FastifyInstance augmentation
-│   │       ├── app.ts          # builds & wires the app
-│   │       └── server.ts       # starts the server with close-with-grace
+│   │       └── server.ts
 │   │
-│   └── web/                    # @stackit/web - Vue 3 SPA
+│   └── web/                    # @brand-radar/web - Vue 3 SPA
 │       └── src/
-│           ├── assets/
-│           ├── components/     # reusable components (forms/, ui/)
-│           ├── composables/    # use* hooks (useZodForm, useAuth, ...)
-│           ├── lib/            # api client, auth client
-│           ├── router/
-│           ├── stores/         # Pinia stores (composition style)
-│           ├── views/          # route-level components (*View.vue)
-│           └── main.ts
+│           ├── components/     # UI components (forms/, ui/)
+│           ├── composables/    # use* hooks
+│           ├── stores/         # Pinia stores
+│           ├── views/          # route-level components
+│           └── router/         # Vue Router config
 │
 ├── packages/
-│   ├── validations/            # @stackit/validations - Zod schemas (SOURCE OF TRUTH)
-│   │   └── src/<feature>/
-│   │       ├── requests.ts     # request body / query / params schemas
-│   │       ├── responses.ts    # response shapes
-│   │       └── routes.ts       # combined route schema objects
-│   │
-│   ├── db/                     # @stackit/db - Drizzle client + schema
-│   │   ├── src/
-│   │   │   ├── schema/         # pgTable definitions, one file per domain
-│   │   │   └── client.ts       # createDatabaseClient factory
-│   │   ├── drizzle/            # generated migrations (committed)
-│   │   ├── drizzle.config.ts
+│   ├── validations/            # @brand-radar/validations - Zod schemas
+│   ├── types/                  # @brand-radar/types - TS types & envelopes
+│   ├── db/                     # @brand-radar/db - Drizzle client + schema
+│   │   ├── src/schema/         # PostgreSQL tables (brands, events, social, etc.)
+│   │   ├── drizzle/            # migrations (committed to git)
 │   │   └── scripts/seed.ts
-│   │
-│   ├── cache/                  # @stackit/cache - Redis client (optional)
-│   ├── auth/                   # @stackit/auth - better-auth wrapper (optional)
-│   ├── types/                  # @stackit/types - pure TS types & envelopes
-│   ├── helpers/                # @stackit/helpers - shared utilities
+│   ├── adapters/               # @brand-radar/adapters - Scraper plugins
+│   │   ├── instagram/          # Instagram crawler
+│   │   ├── tiktok/             # TikTok crawler
+│   │   ├── web/                # Generic web crawler + Shopify/WooCommerce
+│   │   ├── reddit/             # Reddit API client
+│   │   └── src/
+│   │       ├── browser/        # Playwright configuration
+│   │       ├── rate-limiter.ts # Bottleneck rate limiting
+│   │       └── types.ts        # ScraperAdapter interface
+│   ├── workers/                # @brand-radar/workers - BullMQ worker pool
+│   │   └── src/
+│   │       ├── discovery/      # Discovery worker
+│   │       ├── extraction/     # HTML/JSON extraction
+│   │       ├── normalization/  # Deduplication, validation
+│   │       ├── enrichment/     # Social stats, ecommerce signals
+│   │       ├── scoring/        # Brand scoring (v1: rules, v2: ML)
+│   │       ├── indexing/       # Meilisearch sync
+│   │       └── queues/         # Queue configuration
+│   ├── search/                 # @brand-radar/search - Meilisearch client
+│   ├── helpers/                # @brand-radar/helpers - Shared utilities
 │   └── config/
-│       ├── tsconfig/           # base / node / web / vitest tsconfigs
-│       └── eslint-config/      # wraps @antfu/eslint-config
+│       ├── tsconfig/           # shared tsconfigs
+│       └── eslint-config/      # shared ESLint config
 │
-├── .claude/                    # Claude Code configuration
-├── infrastructure/             # nginx configs
-├── scripts/init.ts             # pnpm setup (self-deletes after first run)
+├── .claude/
+│   ├── agents/                 # Specialized subagents
+│   ├── docs/
+│   │   ├── architecture.md     # This file
+│   │   ├── style-guide.md      # Code conventions
+│   │   ├── commit-conventions.md
+│   │   └── brand-platform/
+│   │       ├── overview.md     # Product vision & roadmap
+│   │       ├── pipeline.md     # Worker orchestration
+│   │       ├── schema.md       # Data layer design
+│   │       └── adapters.md     # Scraping strategy
+│   └── settings.json
+│
+├── infrastructure/             # nginx, terraform
 ├── docker-compose.yml
-└── Dockerfile                  # multi-stage: deps → api/web {dev, build, prod}
+└── Dockerfile
 ```
 
-## Package Dependencies
+---
+
+## Pipeline Stages
+
+The Brand Radar pipeline is a **staged, queue-driven data flow** from discovery to indexing:
 
 ```
-@stackit/api
-├── @stackit/db                    # Drizzle client + schema
-├── @stackit/validations           # Zod schemas (shared with web)
-├── @stackit/types
-├── @stackit/helpers
-├── @stackit/auth      (optional)  # better-auth wrapper
-├── @stackit/cache     (optional)  # Redis client
-├── fastify
-├── fastify-type-provider-zod      # bridges Zod ↔ Fastify
-├── @fastify/autoload
-├── @fastify/sensible              # request.server.httpErrors.*
-├── @fastify/swagger + swagger-ui
-├── drizzle-orm                    # direct dep for query helpers (eq, sql, …)
-└── close-with-grace
-
-@stackit/web
-├── @stackit/validations           # same Zod schemas as api
-├── @stackit/types
-├── vue / vue-router / pinia
-├── @rebnd/ui
-├── tailwindcss v4
-├── better-auth        (optional)  # client side
-└── zod
-
-@stackit/db
-├── drizzle-orm
-└── postgres                        # postgres-js driver
-
-@stackit/cache
-└── redis                           # node-redis
-
-@stackit/auth
-└── better-auth                     # uses drizzleAdapter against @stackit/db
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│  Discovery  │─────▶│ Extraction  │─────▶│Normalization│
+│   Workers   │      │   Workers   │      │   Workers   │
+└─────────────┘      └─────────────┘      └─────────────┘
+       │                                          │
+       │                                          ▼
+       │                                   ┌─────────────┐
+       │                                   │ Enrichment  │
+       │                                   │   Workers   │
+       │                                   └──────┬──────┘
+       │                                          │
+       ▼                                          ▼
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│   Storage   │      │   Scoring   │      │   Search    │
+│  (S3+PSQL)  │      │   Workers   │      │  Indexing   │
+└─────────────┘      └─────────────┘      └─────────────┘
 ```
 
-## Data Flow
+### Stage Responsibilities
 
-### Authenticated request lifecycle
+| Stage | Workers | Input | Output | Notes |
+|-------|---------|-------|--------|-------|
+| **Discovery** | 4 per adapter | DiscoveryQuery | RawCandidate (URL) | Crawls sources, emits raw candidates |
+| **Extraction** | 10 concurrent | RawCandidate | ExtractedBrand | Parse HTML/JSON → structured data |
+| **Normalization** | 20 concurrent | ExtractedBrand | NormalizedBrand | Clean, validate, dedupe candidates |
+| **Enrichment** | 5 concurrent | NormalizedBrand | EnrichedBrand | Fetch social stats, ecommerce signals |
+| **Scoring** | 10 concurrent | EnrichedBrand | ScoredBrand | Compute brand scores (rule-based v1) |
+| **Indexing** | 10 concurrent | ScoredBrand | (indexed) | Push to Meilisearch for search |
 
-```
-1. Web sends fetch with credentials: 'include'
-   @stackit/web → POST /api/v1/<route>
+**Key Properties:**
+- **Idempotent:** Workers can retry without double-processing
+- **Observable:** Every stage emits metrics and logs
+- **Isolated:** Each worker type runs in its own process pool (horizontal scaling)
+- **Backpressure-aware:** Queue depth triggers throttling
 
-2. Fastify pipeline (auto-loaded plugins):
-   - external/cors      → CORS headers
-   - external/helmet    → security headers
-   - external/rate-limit → throttle
-   - app/db             → fastify.db (Drizzle)
-   - app/auth           → onRequest hook attaches request.session
-   - app/repositories   → fastify.usersRepository
-   - app/error-handler  → setErrorHandler
+---
 
-3. routes/autohooks.ts onRequest gate:
-   - public paths (/health, /auth, /docs) pass
-   - else require request.session, else 401
+## Data Layer
 
-4. Route handler:
-   - Zod validates request from @stackit/validations
-   - calls handlers.<x>(request, reply)
-   - handler talks only to repositories (which own Drizzle)
-
-5. Response:
-   - Zod serializes response shape
-   - fastify-type-provider-zod returns the result
-```
-
-### Schema evolution flow
+### Storage Components
 
 ```
-1. Edit packages/db/src/schema/<file>.ts
-   - add column, table, index, relation
+┌─────────────────┐
+│   Meilisearch   │  ← Full-text + faceted search (read-only view)
+│  (search index) │
+└────────┬────────┘
+         │ sync
+         ▼
+┌─────────────────┐
+│   PostgreSQL    │  ← Source of truth (entities, relations)
+│   + pgvector    │  ← Semantic embeddings (Phase 3: similarity search)
+└────────┬────────┘
+         │ ephemeral
+         ▼
+┌─────────────────┐
+│      Redis      │  ← Job queues, rate limits, session state
+└─────────────────┘
 
-2. Run pnpm db:generate
-   - drizzle-kit diffs schema vs packages/db/drizzle/meta/_journal.json
-   - emits packages/db/drizzle/<N>_<name>.sql
-
-3. Review the SQL diff (commit it).
-
-4. Apply:
-   - pnpm db:push   (dev shortcut, skips migration history)
-   - pnpm db:migrate (writes to _journal, prod path)
-
-5. Downstream:
-   - $inferSelect / $inferInsert types update automatically
-   - Zod response/request schemas in @stackit/validations may need updates
+┌─────────────────┐
+│   S3 / MinIO    │  ← Raw HTML/JSON, logos, screenshots (immutable)
+└─────────────────┘
 ```
 
-## Plugin Order (api/src/app.ts)
+### Core PostgreSQL Tables
+
+- **`brands`** — Canonical brand entities, scores, metadata
+- **`discovery_events`** — Raw ingestion records (one per source per URL)
+- **`social_profiles`** — Instagram, TikTok, YouTube handles + metrics
+- **`social_snapshots`** — Daily follower/engagement snapshots (for trend detection)
+- **`ecommerce_signals`** — Shopify/WooCommerce detection, product counts, pricing
+- **`trends`** — Computed metrics (follower growth, mention spikes, search volume)
+
+### Indexing Strategy
+
+- **Meilisearch:** Full-text search, faceted filters (category, score, founded_year), typo tolerance, custom ranking
+- **Sync:** Incremental after scoring/enrichment; weekly full re-index (off-peak)
+- **pgvector:** Phase 3 addition for semantic similarity (cosine distance on 1536-dim embeddings)
+
+---
+
+## Frontend Architecture
+
+### View Components
 
 ```
-app.register(autoload, { dir: 'plugins/external' })   // 1. third-party
-app.register(autoload, { dir: 'plugins/app' })        // 2. custom (db, auth, repos)
-app.register(autoload, { dir: 'routes',               // 3. routes
-  autoHooks: true,
-  cascadeHooks: true,
-  options: { prefix: '/api/v1' },
-})
+views/
+├── DiscoveryFeedView.vue
+├── BrandDetailsView.vue
+├── SearchResultsView.vue
+├── TrendAnalysisView.vue
+└── AdminQueueView.vue
 ```
 
-`cascadeHooks: true` makes `routes/autohooks.ts` apply to every nested route file. That's how the auth gate covers `/users`, `/projects`, etc. without per-route boilerplate.
+### State Management (Pinia)
 
-## Environment Variables
+```
+stores/
+├── brands.ts           # Brand list, filtering, pagination
+├── discovery.ts        # Discovery feed state
+├── search.ts           # Search query, results
+└── session.ts          # Auth session (if implemented)
+```
 
-The root `.env.example` is for **host-run** development (apps + tooling on the host, infra in docker). `DATABASE_URL` points to `localhost`. Inside docker, `docker-compose.yml` overrides `DATABASE_URL` to use the `postgres` service hostname.
+### Forms & Validation
+
+- **Shared Zod schemas** from `@brand-radar/validations`
+- **`useZodForm` composable** for two-way binding
+- **Reusable form components** in `components/forms/`
+
+### UI Library
+
+- **Tailwind v4** for styling (utility-first, no custom CSS except where unavoidable)
+- **@rebnd/ui** components for common patterns (buttons, modals, inputs)
+
+---
+
+## Deployment Architecture
+
+### Development (Host Run)
 
 ```bash
-# --- Postgres ---
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=stackit
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/stackit
+# Infrastructure (Docker)
+docker compose up -d postgres redis meilisearch
 
-# --- Redis (optional) ---
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# --- API ---
-NODE_ENV=development
-LOG_LEVEL=info
-API_PORT=3000
-API_HOST=0.0.0.0
-BASE_URL=http://localhost
-FRONTEND_URL=http://localhost
-RATE_LIMIT_MAX=100
-CLOSE_GRACE_DELAY=1000
-
-# --- Web (Vite) ---
-VITE_API_URL=/api
-VITE_APP_NAME=stackit
-
-# --- better-auth (optional) ---
-BETTER_AUTH_SECRET=change-me-in-production-please
-BETTER_AUTH_URL=http://localhost
-OAUTH_GITHUB_ID=
-OAUTH_GITHUB_SECRET=
-OAUTH_GOOGLE_ID=
-OAUTH_GOOGLE_SECRET=
+# Apps & tooling on host (hot reload)
+pnpm dev                    # Starts all apps (api :3000, web :5173)
+pnpm --filter @brand-radar/api dev
+pnpm --filter @brand-radar/web dev
+pnpm --filter @brand-radar/workers dev
 ```
 
-## Key Patterns
+**Environment:** `.env.local` overrides for `DATABASE_URL`, `REDIS_URL`, `MEILISEARCH_URL`
 
-### Backend
-- **Plugin encapsulation** via `fastify-plugin`; explicit `dependencies`.
-- **Repository pattern**: handlers take repositories, repositories own Drizzle. No Drizzle types past the repository boundary.
-- **Optional modules** marked with `MARKER_START` / `MARKER_END` comment blocks; `pnpm setup` prunes them.
-- **`autoPrefix`** export on each route file; mounted under `/api/v1` automatically.
-- **Zod-first**: schemas in `@stackit/validations` drive validation + OpenAPI + form validation.
+### Production (Docker Compose / Kubernetes)
 
-### Frontend
-- **Composition API** with `<script setup lang="ts">` only.
-- **`useZodForm`** binds Vue forms to the same Zod schemas as the api.
-- **Pinia composition style** in `stores/<feature>.ts`.
-- **Tailwind utility-first**; scoped styles only when necessary.
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    
+  redis:
+    image: redis:7-alpine
+    
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    
+  api:
+    build:
+      context: .
+      target: api-prod
+    environment:
+      - DATABASE_URL=postgresql://postgres:pass@postgres:5432/brand_radar
+      - REDIS_URL=redis://redis:6379
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - NODE_ENV=production
+    depends_on: [postgres, redis, meilisearch]
+    
+  web:
+    build:
+      context: .
+      target: web-prod
+    environment:
+      - VITE_API_URL=/api
+    depends_on: [api]
+    
+  workers:
+    build:
+      context: .
+      target: workers-prod
+    environment:
+      - DATABASE_URL=postgresql://postgres:pass@postgres:5432/brand_radar
+      - REDIS_URL=redis://redis:6379
+    depends_on: [postgres, redis]
+    deploy:
+      replicas: 3  # Scale per worker type
+```
 
-### Database
-- **Schema-as-code** in TS, `casing: 'snake_case'` for SQL columns.
-- **Migrations** committed under `packages/db/drizzle/`.
-- **Transactions** via `db.transaction((tx) => …)`; repositories accept `tx?: DbClient`.
-- **pgvector** is opt-in: declare `vector('embedding', { dimensions: N })` and add `CREATE EXTENSION vector;` to a migration.
+**Dockerfile:** Multi-stage build producing `api-prod`, `web-prod`, `workers-prod` targets.
 
-See [`./style-guide.md`](./style-guide.md) for the full code conventions.
+---
+
+## Key Design Principles
+
+### 1. Pipeline-First
+
+Every piece of data flows through defined stages, not ad-hoc scrapers. No direct write-to-search shortcuts. Each stage has its own queue and worker pool.
+
+### 2. Adapter Abstraction
+
+Every source (Instagram, TikTok, web, Reddit) is a self-contained plugin implementing `ScraperAdapter`:
+```typescript
+interface ScraperAdapter {
+  id: string
+  sourceType: 'instagram' | 'tiktok' | 'website' | 'reddit' | 'etsy'
+  discover(query: DiscoveryQuery): AsyncGenerator<RawCandidate>
+  extract(url: string): Promise<ExtractedBrand>
+  probe(): Promise<AdapterHealth>
+}
+```
+
+**Adding a new source:** Drop a new adapter folder. Zero changes to orchestration.
+
+### 3. Raw Storage Always
+
+Store raw HTML/JSON in S3/MinIO **before parsing**. Enables:
+- Replaying extractions without re-crawling when adapter logic changes
+- Compliance audits (immutable raw record)
+- Debugging extraction failures
+
+### 4. Entity Resolution Is Foundational
+
+One canonical `brand` record per brand, resolved before scoring or indexing. Prevents:
+- Duplicate entries in search results
+- Inflated popularity scores (same brand counted 10x)
+- Broken ecommerce signal aggregation
+
+### 5. Deterministic Before AI
+
+Core pipeline (discovery → extraction → normalization) must never depend on AI to function. Rule-based scoring (v1) works with just data. ML (v2, Phase 3) is optional acceleration.
+
+### 6. Observability from Day One
+
+Every worker emits structured logs and Prometheus metrics. **Silent scraper failures are the #1 reliability killer.** Key signals:
+- Adapter health status (probe results)
+- Queue depth per stage
+- Worker job duration and failure rates
+- Search latency
+
+### 7. Error Handling & Retry Strategy
+
+| Error Type | Handling | Example |
+|-----------|----------|---------|
+| Transient (network timeout, rate limit) | Retry with exponential backoff | `error.code === 'ETIMEDOUT'` |
+| Permanent (invalid data, schema mismatch) | Move to dead-letter queue (DLQ) | `extraction_success === false` |
+| Adapter failure (403, captcha) | Pause adapter, alert on-call | HTTP 403 Forbidden |
+
+---
+
+## Request Lifecycle (API)
+
+```
+1. Frontend sends fetch to /api/v1/<route>
+   
+2. Fastify middleware pipeline:
+   - external/cors        → CORS headers
+   - external/helmet      → security headers
+   - app/db               → fastify.db decorator (Drizzle client)
+   - app/error-handler    → global error handler
+   
+3. Route handler:
+   - Zod validates request from @brand-radar/validations
+   - Handler calls service layer
+   - Service queries repositories
+   - Repositories use fastify.db (Drizzle ORM)
+   
+4. Response:
+   - Zod serializes response shape
+   - fastify-type-provider-zod returns JSON
+```
+
+---
+
+## Backend Patterns
+
+### Module Structure
+
+```
+modules/<feature>/
+├── <feature>.routes.ts      # Fastify plugin, autoPrefix = '/<feature>'
+├── <feature>.handlers.ts    # HTTP layer (request/response, status codes)
+├── <feature>.service.ts     # Business logic (validation, errors)
+└── <feature>.repository.ts  # Data access (Drizzle queries, transactions)
+```
+
+**Dependency flow:** routes → handlers → service → repository
+
+### Repository Pattern
+
+Each method accepts optional `tx?: DbClient` for transaction support:
+
+```typescript
+export function createBrandsRepository(db: DatabaseClient) {
+  return {
+    async findById(id: string, tx?: DbClient): Promise<Brand | undefined> {
+      return (tx ?? db).query.brands.findFirst({ where: eq(brands.id, id) })
+    },
+    async create(data: CreateBrandInput, tx?: DbClient): Promise<Brand> {
+      return (tx ?? db).insert(brands).values(data).returning()
+    },
+  }
+}
+```
+
+### Service Pattern
+
+Business logic, domain errors (NotFoundError, ConflictError):
+
+```typescript
+export function createBrandsService(repo: BrandsRepository) {
+  return {
+    async createBrand(data: CreateBrandInput) {
+      const existing = await repo.findBySlug(data.slug)
+      if (existing) throw new ConflictError('Brand slug already exists')
+      return repo.create(data)
+    },
+  }
+}
+```
+
+---
+
+## Database Patterns (Drizzle)
+
+- **Schema as code:** TS under `packages/db/src/schema/<feature>.ts`
+- **Casing:** `casing: 'snake_case'` in `drizzle.config.ts` maps `camelCase` TS to `snake_case` SQL
+- **Migrations:** Committed under `packages/db/drizzle/`
+- **pgvector:** Native support for vector columns and `cosineDistance` / `l2Distance` operators
+
+### Generating Migrations
+
+```bash
+# Edit packages/db/src/schema/<feature>.ts
+pnpm db:generate              # Produces SQL in packages/db/drizzle/
+pnpm db:push (dev) or db:migrate (prod)
+```
+
+---
+
+## Reference Documentation
+
+For detailed information on specific domains, see:
+
+- **[Overview & Roadmap](./brand-platform/overview.md)** — Product vision, phased roadmap, core principles
+- **[Pipeline Architecture](./brand-platform/pipeline.md)** — Worker orchestration, job queues, scoring system, observability
+- **[Data Layer & Schema](./brand-platform/schema.md)** — PostgreSQL tables, Meilisearch indexing, pgvector config
+- **[Adapter & Scraping Strategy](./brand-platform/adapters.md)** — Anti-bot tactics, Playwright config, source-specific patterns
+- **[Style Guide](./style-guide.md)** — Code conventions, naming, TypeScript patterns
+- **[Commit Conventions](./commit-conventions.md)** — Conventional Commits for monorepo
+
+---
+
+## Specialized Agents
+
+Delegate to subagents for domain-specific work:
+
+| Agent | When to use |
+|-------|------------|
+| `drizzle-expert` | Schema changes, query patterns, migrations, pgvector |
+| `fastify-expert` | Plugins, routes, hooks, error handling |
+| `vue-expert` | Components, composables, Pinia stores |
+| `scraping-expert` | Adapter implementation, anti-bot strategies, browser config |
+| `pipeline-expert` | Worker implementation, BullMQ queues, scoring logic |
+
+See `.claude/agents/` for full definitions.
