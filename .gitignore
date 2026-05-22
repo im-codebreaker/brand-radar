@@ -31,3 +31,7 @@ packages/db/dev.db*
 apps/web/.vite/
 apps/web/dist-ssr/
 *.local
+
+# claude code
+.claude/worktrees/
+docs/superpowers/
