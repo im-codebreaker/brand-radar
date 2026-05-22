@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import process from 'node:process'
-import { z } from 'zod'
+import { z } from '@brand-radar/shared/schemas'
 
 const HealthResponseSchema = z.object({
   status: z.literal('ok'),
