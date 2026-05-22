@@ -1,58 +1,63 @@
-# stackit — Project Instructions
+# Brand Radar — Project Instructions
 
-> Stack it your way — minimal full-stack starter (Vue 3 + Fastify + Drizzle).
+> Discover, resolve, and rank emerging fashion and perfume brands from social platforms and the web.
 
-stackit is a pnpm-workspace monorepo template designed to be cloned, customized via `pnpm setup`, and shipped fast. Optional modules (Redis, better-auth) can be pruned at setup time without leaving dead code behind.
+Brand Radar is a pipeline-driven intelligence platform that discovers brand signals, resolves entities, enriches metadata, scores relevance, and surfaces insights through a searchable dashboard.
 
 ## Tech Stack
 
 | Layer        | Technology                                                  |
 | ------------ | ----------------------------------------------------------- |
-| Frontend     | Vue 3.5, Vite 7, Pinia, Vue Router, Tailwind v4, @rebnd/ui  |
+| Frontend     | Vue 3.5, Vite 7, Pinia, Vue Router, Tailwind v4             |
 | Backend      | Fastify 5, autoload, type-provider-zod                      |
-| Database     | PostgreSQL via Drizzle ORM (pgvector-ready)                 |
-| Validation   | Zod v4 — shared between frontend and backend                |
-| Cache        | Redis (optional)                                             |
-| Auth         | better-auth (optional)                                       |
+| Workers      | BullMQ, Playwright, adapters                                 |
+| Database     | PostgreSQL + pgvector, Drizzle ORM                           |
+| Search       | Meilisearch (full-text + faceted search)                     |
+| Cache        | Redis (BullMQ queues + rate limiting)                        |
+| Storage      | S3/MinIO (raw HTML/JSON, logos)                              |
+| Auth         | better-auth                                                  |
 | Tooling      | TypeScript, ESLint (antfu), Vitest, Docker                   |
 
 ## Monorepo Structure
 
 ```
-stackit/
+brand-radar/
 ├── apps/
-│   ├── api/                    # @stackit/api - Fastify backend
-│   └── web/                    # @stackit/web - Vue 3 SPA
+│   ├── api/                    # @brand-radar/api - Fastify REST API
+│   ├── web/                    # @brand-radar/web - Vue 3 SPA
+│   ├── workers/                # @brand-radar/workers - BullMQ job processors
+│   └── scheduler/              # @brand-radar/scheduler - Cron job manager
 ├── packages/
-│   ├── validations/            # @stackit/validations - Zod schemas (SOURCE OF TRUTH)
-│   ├── types/                  # @stackit/types - pure TS types & API envelopes
-│   ├── db/                     # @stackit/db - Drizzle client + schema
-│   ├── cache/                  # @stackit/cache - Redis client (optional)
-│   ├── auth/                   # @stackit/auth - better-auth wrapper (optional)
-│   ├── helpers/                # @stackit/helpers - shared utilities
+│   ├── db/                     # @brand-radar/db - Drizzle ORM + schema
+│   ├── search/                 # @brand-radar/search - Meilisearch client
+│   ├── redis/                  # @brand-radar/redis - Redis client
+│   ├── adapters/               # @brand-radar/adapters - Scraping adapters
+│   ├── shared/                 # @brand-radar/shared - Shared utilities & types
+│   ├── ai/                     # @brand-radar/ai - Embeddings, NLP (Phase 3)
+│   ├── taxonomy/               # @brand-radar/taxonomy - Brand classification
+│   ├── auth/                   # @brand-radar/auth - better-auth wrapper
 │   └── config/
-│       ├── tsconfig/           # shared tsconfigs
-│       └── eslint-config/      # shared ESLint config (wraps @antfu/eslint-config)
+│       ├── tsconfig/           # Shared TypeScript configs
+│       └── eslint-config/      # Shared ESLint config (wraps @antfu/eslint-config)
 ├── .claude/                    # Claude Code configuration
 │   ├── agents/                 # Specialized subagents
-│   ├── docs/                   # Architecture, style guide, commit conventions
-│   └── settings.json
+│   └── docs/                   # Architecture, style guide, commit conventions
+│       ├── architecture.md
+│       ├── brand-platform/     # Domain-specific guides
+│       └── decisions/          # ADRs
 ├── infrastructure/             # nginx config
-├── scripts/init.ts             # post-clone setup (pnpm setup) — self-deletes
 ├── docker-compose.yml
-└── Dockerfile                  # multi-stage: deps → api/web {build, dev, prod}
+└── Dockerfile                  # multi-stage: deps → apps {build, dev, prod}
 ```
 
 ## Development Commands
 
 ```bash
-# Setup (one-time, removes itself after running)
-pnpm setup
-
 # Dev
-pnpm dev                              # all apps in parallel (api :3000, web :5173)
-pnpm --filter @stackit/api dev        # just the api
-pnpm --filter @stackit/web dev        # just the web
+pnpm dev                              # all apps in parallel (api :3000, web :5173, workers, scheduler)
+pnpm --filter @brand-radar/api dev    # just the api
+pnpm --filter @brand-radar/web dev    # just the web
+pnpm --filter @brand-radar/workers dev # just workers
 
 # Database (Drizzle)
 pnpm db:generate                      # generate migration from schema diff
@@ -69,15 +74,15 @@ pnpm test                             # vitest (api + web)
 pnpm build                            # build every app
 
 # Docker
-docker compose up -d postgres redis   # infra only
-docker compose up --build --watch     # full stack with hot reload
+docker compose up -d postgres redis meilisearch # infra only
+docker compose up --build --watch               # full stack with hot reload
 ```
 
 ## Git Workflow
 
 ### Commit Conventions
 
-stackit uses **[Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)** with monorepo-aware scopes.
+Brand Radar uses **[Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)** with monorepo-aware scopes.
 
 ```
 <type>(<scope>): <description>
@@ -92,25 +97,29 @@ stackit uses **[Conventional Commits 1.0.0](https://www.conventionalcommits.org/
 **Scopes** (map to the area of the monorepo touched):
 - `api` — `apps/api/**`
 - `web` — `apps/web/**`
+- `workers` — `apps/workers/**`
+- `scheduler` — `apps/scheduler/**`
 - `db` — `packages/db/**` (schema, migrations, client)
+- `search` — `packages/search/**` (Meilisearch client)
+- `redis` — `packages/redis/**` (Redis client)
+- `adapters` — `packages/adapters/**` (scraping adapters)
+- `shared` — `packages/shared/**` (utilities, types)
+- `ai` — `packages/ai/**` (embeddings, NLP)
+- `taxonomy` — `packages/taxonomy/**` (brand classification)
 - `auth` — `packages/auth/**` (better-auth wrapper)
-- `cache` — `packages/cache/**` (Redis)
-- `validations` — `packages/validations/**` (Zod schemas)
-- `types` — `packages/types/**`
-- `helpers` — `packages/helpers/**`
 - `config` — `packages/config/**` (tsconfig, eslint)
 - `infra` — `Dockerfile`, `docker-compose.yml`, `infrastructure/**`
-- `repo` — root package.json, scripts/, workspace-level config
+- `repo` — root package.json, workspace-level config
 - `deps` — dependency bumps that span packages
 - `docs` — README, `.claude/docs/**`, in-repo documentation
 
 **Examples**:
-- `feat(api): add /v1/projects routes with pagination`
-- `fix(db): handle drizzle migration race in db:reset`
-- `refactor(web): extract UserCard to components/ui/`
+- `feat(adapters): add Instagram hashtag crawler`
+- `fix(workers): handle extraction timeout in normalization worker`
+- `refactor(search): extract brand indexing to reusable function`
 - `chore(deps): bump drizzle-orm to ^0.46`
-- `docs(repo): explain pnpm setup pruning flow`
-- `feat(api)!: rename users.list response shape` (breaking change)
+- `docs(brand-platform): update pipeline architecture`
+- `feat(api)!: rename brands.list response shape` (breaking change)
 
 **Important — no Claude attribution**: do not add `Co-Authored-By: Claude` (or similar) trailers to commit messages. `.claude/settings.json` sets `includeCoAuthoredBy: false` to enforce this.
 
@@ -124,20 +133,22 @@ For the full spec, scope decisions, and breaking-change handling, see [`./docs/c
 2. **Consistency** — follow established patterns; canonical examples are linked in [`./docs/style-guide.md`](./docs/style-guide.md)
 3. **Simplicity** — no premature abstractions, no speculative generality
 4. **Type safety** — no `any`, use `unknown` when truly unknown
-5. **Zod is the source of truth** — every cross-boundary data shape (request, response, DTO, form) lives in `@stackit/validations`
+5. **Zod for validation** — validate at system boundaries (user input, external APIs, job data)
 
 ### Naming
 
 | Type | Convention | Example |
 |------|------------|---------|
-| TS files | `kebab-case` | `user-handlers.ts` |
-| Vue components | `PascalCase` | `UserCard.vue` |
-| Vars / functions | `camelCase` | `getUserById` |
+| TS files | `kebab-case` | `brand-handlers.ts` |
+| Vue components | `PascalCase` | `BrandCard.vue` |
+| Vars / functions | `camelCase` | `getBrandById` |
 | Constants | `UPPER_SNAKE_CASE` | `MAX_RETRIES` |
-| Types / interfaces | `PascalCase` | `UserRepository` |
-| Booleans | `is/has/should` prefix | `isActive`, `hasPermission` |
-| Pinia stores | `*.ts` in `stores/` | `auth.ts`, `users.ts` |
-| Composables | `use*` prefix | `useZodForm` |
+| Types / interfaces | `PascalCase` | `BrandRepository` |
+| Booleans | `is/has/should` prefix | `isActive`, `hasEcommerce` |
+| Pinia stores | `*.ts` in `stores/` | `auth.ts`, `brands.ts` |
+| Composables | `use*` prefix | `useSearch` |
+| Workers | `*.worker.ts` | `scoring.worker.ts` |
+| Adapters | `*-adapter.ts` | `instagram-adapter.ts` |
 
 ### Comments
 
@@ -150,14 +161,14 @@ For the full spec, scope decisions, and breaking-change handling, see [`./docs/c
 
 Examples of useless comments to avoid:
 ```ts
-// Get user by ID
-async getUserById(id: string) { ... }
+// Get brand by ID
+async getBrandById(id: string) { ... }
 
 // Create service from repository
-const service = createUsersService(repo)
+const service = createBrandsService(repo)
 
-// Business rule: email must be unique
-if (existing) throw new ConflictError('Email already in use')
+// Business rule: brand name must be unique
+if (existing) throw new ConflictError('Brand already exists')
 ```
 
 The code is already clear — the comments add no value.
@@ -174,97 +185,77 @@ The code is already clear — the comments add no value.
 
 Two-tier autoload:
 - `apps/api/src/plugins/external/` — third-party (cors, helmet, rate-limit, swagger)
-- `apps/api/src/plugins/app/` — custom (`db`, `redis`, `auth`, `repositories`, `error-handler`)
+- `apps/api/src/plugins/app/` — custom (`db`, `redis`, `search`, `repositories`, `auth`, `error-handler`)
 
 Plugins must be wrapped with `fastify-plugin` to expose decorators to siblings. Use the `dependencies` option to express load order:
 
 ```ts
 export default fp(async (fastify) => {
-  fastify.decorate('usersRepository', createUsersRepository(fastify.db))
+  fastify.decorate('brandsRepository', createBrandsRepository(fastify.db))
 }, { name: 'repositories', dependencies: ['db'] })
 ```
-
-Removing a feature is just deleting its plugin file — autoload picks up the rest.
 
 ### DDD Module Structure
 
 Each domain lives in `apps/api/src/modules/<feature>/` with clean architecture layers:
 
 ```
-modules/users/
-├── users.routes.ts      # Fastify plugin, exports autoPrefix = '/users'
-├── users.handlers.ts    # HTTP layer — request/response, status codes
-├── users.service.ts     # Business logic — validation, orchestration
-└── users.repository.ts  # Data access — Drizzle queries, transactions
+modules/brands/
+├── brands.routes.ts      # Fastify plugin, exports autoPrefix = '/brands'
+├── brands.handlers.ts    # HTTP layer — request/response, status codes
+├── brands.service.ts     # Business logic — validation, orchestration
+└── brands.repository.ts  # Data access — Drizzle queries, transactions
 ```
 
 **Dependency flow**: routes → handlers → service → repository
 
-**Repository pattern**: Each method accepts an optional `tx?: DbClient` for transaction support:
+## Worker Patterns (BullMQ)
 
-```ts
-export function createUsersRepository(db: DatabaseClient) {
-  return {
-    async findById(id: string, tx?: DbClient): Promise<User | undefined> {
-      return (tx ?? db).query.users.findFirst({ where: eq(users.id, id) })
-    },
-  }
-}
+### Worker Types
+
+Workers live in `apps/workers/src/workers/` and process jobs from BullMQ queues:
+
+```
+workers/
+├── discovery.worker.ts      # Crawl sources, emit raw candidates
+├── extraction.worker.ts     # Parse raw HTML/JSON → structured data
+├── normalization.worker.ts  # Clean, validate, dedupe
+├── enrichment.worker.ts     # Fetch social stats, ecommerce signals
+├── scoring.worker.ts        # Compute brand scores
+└── indexing.worker.ts       # Push to Meilisearch
 ```
 
-**Service pattern**: Business logic and domain errors (NotFoundError, ConflictError):
+Each worker:
+- Validates job data with Zod
+- Emits Prometheus metrics
+- Handles retries with exponential backoff
+- Enqueues downstream jobs on completion
 
-```ts
-export function createUsersService(repo: UsersRepository) {
-  return {
-    async createUser(data: CreateUserInput) {
-      const existing = await repo.findByEmail(data.email)
-      if (existing) throw new ConflictError('Email already in use')
-      return repo.create(data)
-    },
-  }
-}
-```
+See [Pipeline Architecture](./docs/brand-platform/pipeline.md) for full worker patterns.
 
-**Handler pattern**: HTTP concerns only, no business logic:
+## Scraping Patterns (Playwright + Adapters)
 
-```ts
-export function createUserHandlers(service: UsersService) {
-  return {
-    async create(request: FastifyRequest<{ Body: CreateUserInput }>, reply: FastifyReply) {
-      const user = await service.createUser(request.body)
-      return reply.code(201).send({ user })
-    },
-  }
-}
-```
+### Adapter Architecture
 
-**Routes pattern**: Wire service and handlers, register routes:
+Every scraping source implements the `ScraperAdapter` interface:
 
-```ts
-const plugin: FastifyPluginAsyncZod = async (fastify) => {
-  const service = createUsersService(fastify.usersRepository)
-  const handlers = createUserHandlers(service)
+```typescript
+interface ScraperAdapter {
+  id: string
+  sourceType: 'instagram' | 'tiktok' | 'website' | 'reddit'
   
-  fastify.post('/', { schema: users.routes.createUserRoute }, handlers.create)
+  configure(params: AdapterConfig): void
+  discover(query: DiscoveryQuery): AsyncGenerator<RawCandidate>
+  extract(url: string): Promise<ExtractedBrand>
+  
+  rateLimit: { requestsPerMinute: number; cooldownMs: number }
+  probe(): Promise<AdapterHealth>
 }
-export default plugin
-export const autoPrefix = '/users'
 ```
 
-### Validation
+Adapters live in `packages/adapters/<source>/` and are registered in the adapter registry.
 
-- Zod schemas live in `packages/validations/src/<feature>/` and are imported by both api and web.
-- The Fastify route uses `fastify-type-provider-zod` to validate request and serialize response from the same schema.
-- The Vue form uses `useZodForm` with the same schema.
-- OpenAPI docs are derived from the Zod schemas automatically.
-
-### Error Handling
-
-- Global handler at `apps/api/src/plugins/app/error-handler.ts`.
-- Zod validation errors → 400 with structured `issues`.
-- Drizzle/Postgres errors → catch `PostgresError` for constraint violations (`23505` unique, `23503` FK, etc.) and convert to typed HTTP errors.
-- Use `request.server.httpErrors` (via `@fastify/sensible`) for canonical status codes.
+See [Adapter Strategy](./docs/brand-platform/adapters.md) for full patterns.
 
 ## Frontend Patterns (Vue 3)
 
@@ -272,33 +263,21 @@ export const autoPrefix = '/users'
 - Composables in `apps/web/src/composables/`, prefixed `use*`.
 - Pinia stores in `apps/web/src/stores/<feature>.ts`, composition style.
 - Vue Router in `apps/web/src/router/`.
-- Forms use `useZodForm` with the shared Zod schema from `@stackit/validations`.
+- Forms use Zod validation with shared schemas.
 - Styling via Tailwind v4 (no custom CSS unless unavoidable).
 
-See [`./docs/style-guide.md`](./docs/style-guide.md) and the [`vue-expert`](./agents/vue-expert.md) agent for full conventions and anti-patterns.
+See [Style Guide](./docs/style-guide.md) for full conventions.
 
 ## Database Patterns (Drizzle)
 
-- Schema in TS under `packages/db/src/schema/` — one file per domain (`users.ts`, `auth.ts`).
+- Schema in TS under `packages/db/src/schema/` — one file per domain (`brands.ts`, `social-profiles.ts`).
 - `casing: 'snake_case'` in `drizzle.config.ts` maps camelCase TS columns to snake_case SQL automatically.
 - Migrations under `packages/db/drizzle/` — committed to git.
-- The `users` schema file uses `// BETTER_AUTH_RELATIONS_START/END` markers; `pnpm setup` removes those blocks when auth is declined.
-- Repository pattern (see Backend Patterns above) keeps Drizzle types confined to `repositories/` and `@stackit/db`.
+- Repository pattern keeps Drizzle types confined to `repositories/` and `@brand-radar/db`.
 
-**pgvector-ready**: Drizzle natively supports `vector('embedding', { dimensions: 1536 })` and typed `cosineDistance` / `l2Distance` operators. Add `CREATE EXTENSION IF NOT EXISTS vector;` to a migration when you need it.
+**pgvector-ready**: Drizzle natively supports `vector('embedding', { dimensions: 1536 })` and typed `cosineDistance` operators.
 
-See [`./docs/style-guide.md`](./docs/style-guide.md) and the [`drizzle-expert`](./agents/drizzle-expert.md) agent.
-
-## Optional Modules
-
-`pnpm setup` prompts for Redis and better-auth at clone time. Declining a module is purely additive cleanup:
-
-| Module      | Removed if declined                                                                |
-| ----------- | ---------------------------------------------------------------------------------- |
-| Redis       | `packages/cache/`, `apps/api/src/plugins/app/redis.ts`, redis service in compose   |
-| better-auth | `packages/auth/`, auth plugin/route/lib, login view, auth store, auth schema       |
-
-The setup script also handles marker-block pruning (e.g., `BETTER_AUTH_RELATIONS_START/END` in schema files) and re-renames the workspace if a custom project name is provided.
+See [Schema Design](./docs/brand-platform/schema.md) for full patterns.
 
 ## Specialized Agents
 
@@ -310,60 +289,72 @@ Delegate to subagents when the task is domain-specific. Each agent encodes proje
 | [`fastify-expert`](./agents/fastify-expert.md) | Plugins, routes, hooks, autoload, error handling, better-auth integration |
 | [`vue-expert`](./agents/vue-expert.md) | Components, composables, Pinia stores, Vue Router |
 | [`javascript-expert`](./agents/javascript-expert.md) | TypeScript refactors, error handling, general TS/JS patterns |
-| [`scraping-expert`](./agents/scraping-expert.md) | Browser automation, Playwright setup, scraping logic, selector management |
-| [`pipeline-expert`](./agents/pipeline-expert.md) | Data pipeline architecture, ETL flows, Meilisearch integration, queue operations |
+| [`scraping-expert`](./agents/scraping-expert.md) | Playwright automation, anti-bot evasion, adapter implementation |
+| [`pipeline-expert`](./agents/pipeline-expert.md) | BullMQ workers, job queues, pipeline observability |
 
 ## Documentation Structure
 
 ### Core Documentation
 
-These documents define stackit's architecture and conventions:
-
-- **[Architecture](./docs/architecture.md)** — System diagram, package dependencies, request lifecycle, data flow
-- **[Style Guide](./docs/style-guide.md)** — Code conventions, anti-patterns, framework-specific best practices
-- **[Commit Conventions](./docs/commit-conventions.md)** — Conventional Commits adapted to stackit's monorepo scopes
+- **[Architecture](./docs/architecture.md)** — System diagram, data flow, frontend/backend structure, deployment
+- **[Style Guide](./docs/style-guide.md)** — Code conventions, naming, anti-patterns
+- **[Commit Conventions](./docs/commit-conventions.md)** — Conventional Commits adapted to Brand Radar
 
 ### Brand Radar Platform Guides
 
-Domain-specific guides for the brand-radar scraping and data platform:
-
-- **[Platform Overview](./docs/brand-platform/overview.md)** — System architecture, core components, data model
-- **[Scraping Pipeline](./docs/brand-platform/pipeline.md)** — ETL workflow, data processing, Meilisearch indexing
-- **[Schema Design](./docs/brand-platform/schema.md)** — Database tables, relationships, indexing strategy
-- **[Source Adapters](./docs/brand-platform/adapters.md)** — Building custom adapters, Playwright patterns, data extraction
+- **[Overview](./docs/brand-platform/overview.md)** — Strategic vision, principles, phased roadmap, risks, checklist
+- **[Pipeline](./docs/brand-platform/pipeline.md)** — Worker orchestration, BullMQ, scoring, observability
+- **[Schema](./docs/brand-platform/schema.md)** — Data model, pgvector, Meilisearch index, Redis strategy
+- **[Adapters](./docs/brand-platform/adapters.md)** — Scraping strategy, anti-bot tactics, Playwright config
 
 ### Architecture Decision Records (ADRs)
 
-Design decisions that shaped the platform:
+Key technical decisions are documented in `.claude/docs/decisions/`:
 
-- **[ADR-001: Playwright-Only Approach](./docs/decisions/001-playwright-only.md)** — Why we chose Playwright for all browser automation
-- **[ADR-002: Meilisearch Over OpenSearch](./docs/decisions/002-meilisearch-not-opensearch.md)** — Search indexing technology choice
-- **[ADR-003: Adapter vs Source Separation](./docs/decisions/003-adapter-vs-source-separation.md)** — Module architecture for extensibility
+- **[ADR-001: Playwright Only](./docs/decisions/001-playwright-only.md)** — Why Playwright over Puppeteer/Selenium
+- **[ADR-002: Meilisearch Not OpenSearch](./docs/decisions/002-meilisearch-not-opensearch.md)** — Search engine choice rationale
+- **[ADR-003: Adapter vs Source Separation](./docs/decisions/003-adapter-vs-source-separation.md)** — Adapter architecture pattern
 
 ### When to Use Which Agent
 
-| Task | Primary Agent | Secondary |
-|------|---------------|-----------|
-| Schema changes, migrations, queries | `drizzle-expert` | `javascript-expert` |
-| API routes, plugins, error handling | `fastify-expert` | `javascript-expert` |
-| Vue components, stores, composables | `vue-expert` | `javascript-expert` |
-| TypeScript refactors, patterns | `javascript-expert` | — |
-| Browser automation, web scraping | `scraping-expert` | `pipeline-expert` |
-| Data pipelines, ETL, indexing | `pipeline-expert` | `scraping-expert` |
+| Task | Agent |
+|------|-------|
+| Database schema, Drizzle queries, migrations | [`drizzle-expert`](./agents/drizzle-expert.md) |
+| Fastify routes, plugins, better-auth integration | [`fastify-expert`](./agents/fastify-expert.md) |
+| Vue components, Pinia stores, composables | [`vue-expert`](./agents/vue-expert.md) |
+| TypeScript refactors, error handling, utilities | [`javascript-expert`](./agents/javascript-expert.md) |
+| Playwright automation, anti-bot, adapters | [`scraping-expert`](./agents/scraping-expert.md) |
+| BullMQ workers, job queues, pipeline observability | [`pipeline-expert`](./agents/pipeline-expert.md) |
 
 ## Common Tasks
 
-### Adding a new API domain (e.g., `projects`)
+### Adding a new API domain (e.g., `trends`)
 
-1. Define Zod schemas in `packages/validations/src/projects/{requests,responses,routes}.ts`.
-2. Add Drizzle table in `packages/db/src/schema/projects.ts` and re-export from `schema/index.ts`.
-3. Run `pnpm db:generate` then `pnpm db:push` (or `db:migrate` in prod).
-4. Create module directory: `apps/api/src/modules/projects/`
-5. Create repository: `modules/projects/projects.repository.ts` (factory + optional `tx`).
-6. Expose via `repositories` plugin (`apps/api/src/plugins/core/repositories.ts`) and add decorator type in `apps/api/src/types/fastify.d.ts`.
-7. Create service: `modules/projects/projects.service.ts` (business logic, domain errors).
-8. Create handlers: `modules/projects/projects.handlers.ts` (HTTP layer only).
-9. Create routes: `modules/projects/projects.routes.ts` with `autoPrefix = '/projects'`.
+1. Add Drizzle table in `packages/db/src/schema/trends.ts` and re-export from `schema/index.ts`.
+2. Run `pnpm db:generate` then `pnpm db:push` (or `db:migrate` in prod).
+3. Create module directory: `apps/api/src/modules/trends/`
+4. Create repository: `modules/trends/trends.repository.ts` (factory + optional `tx`).
+5. Expose via `repositories` plugin and add decorator type in `apps/api/src/types/fastify.d.ts`.
+6. Create service: `modules/trends/trends.service.ts` (business logic, domain errors).
+7. Create handlers: `modules/trends/trends.handlers.ts` (HTTP layer only).
+8. Create routes: `modules/trends/trends.routes.ts` with `autoPrefix = '/trends'`.
+
+### Adding a new worker
+
+1. Define job schema in `@brand-radar/shared` (Zod)
+2. Create worker file in `apps/workers/src/workers/<name>.worker.ts`
+3. Implement worker logic (validate job.data, emit metrics, enqueue downstream jobs)
+4. Configure queue in `apps/workers/src/queues/config.ts`
+5. Register worker in `apps/workers/src/index.ts`
+6. Add integration test that enqueues job and verifies output
+
+### Adding a new scraping adapter
+
+1. Create adapter folder under `packages/adapters/<source>/`
+2. Implement `ScraperAdapter` interface with `configure`, `discover`, `extract`, `probe`
+3. Add Zod schema for extracted data in `@brand-radar/shared`
+4. Add integration test that runs `probe()` and validates output shape
+5. Register adapter in `packages/adapters/src/registry.ts`
 
 ### Adding a new Vue page
 
@@ -371,18 +362,12 @@ Design decisions that shaped the platform:
 2. Route entry in `apps/web/src/router/index.ts`.
 3. Pinia store in `apps/web/src/stores/<feature>.ts` if state is shared.
 4. Composable in `apps/web/src/composables/` if behavior is reusable.
-5. Forms use `useZodForm` + shared Zod schema from `@stackit/validations`.
-
-### Database schema change
-
-1. Edit `packages/db/src/schema/<file>.ts`.
-2. `pnpm db:generate` — produces SQL in `packages/db/drizzle/`. **Review the diff** before committing.
-3. `pnpm db:push` (dev) or `pnpm db:migrate` (prod path).
-4. If types changed, regenerate types via `pnpm type-check`.
 
 ## Reference Documentation
 
 - **[Architecture](./docs/architecture.md)** — system diagram, package dependencies, request lifecycle
 - **[Style Guide](./docs/style-guide.md)** — code conventions, anti-patterns, framework specifics
-- **[Commit Conventions](./docs/commit-conventions.md)** — Conventional Commits adapted to stackit's monorepo scopes
+- **[Commit Conventions](./docs/commit-conventions.md)** — Conventional Commits adapted to Brand Radar's monorepo scopes
+- **[Brand Platform Guides](./docs/brand-platform/)** — domain-specific documentation (overview, pipeline, schema, adapters)
 - **[Agents](./agents/)** — domain-specific subagent definitions
+- **[Decisions](./docs/decisions/)** — Architecture Decision Records (ADRs)

@@ -1,4 +1,4 @@
-# stackit — Style Guide
+# Brand Radar — Style Guide
 
 ## Reference Files
 
@@ -12,28 +12,50 @@ Canonical examples of project patterns. Read the relevant one before implementin
 | Server startup | `apps/api/src/server.ts` |
 | Env loader (Zod-validated) | `apps/api/src/config/env.ts` |
 | App plugin (db) | `apps/api/src/plugins/app/db.ts` |
+| App plugin (search) | `apps/api/src/plugins/app/search.ts` |
+| App plugin (redis) | `apps/api/src/plugins/app/redis.ts` |
 | App plugin (repositories) | `apps/api/src/plugins/app/repositories.ts` |
-| App plugin (auth, optional) | `apps/api/src/plugins/app/auth.ts` |
+| App plugin (auth) | `apps/api/src/plugins/app/auth.ts` |
 | Error handler | `apps/api/src/plugins/app/error-handler.ts` |
 | External plugin (swagger) | `apps/api/src/plugins/external/swagger.ts` |
-| Repository (Drizzle queries) | `apps/api/src/repositories/users.ts` |
-| Handler factory | `apps/api/src/handlers/users.ts` |
-| Route (Zod-typed) | `apps/api/src/routes/users.ts` |
+| Repository (Drizzle queries) | `apps/api/src/repositories/brands.ts` |
+| Handler factory | `apps/api/src/handlers/brands.ts` |
+| Route (Zod-typed) | `apps/api/src/routes/brands.ts` |
 | Auth gate | `apps/api/src/routes/autohooks.ts` |
 | Decorator augmentation | `apps/api/src/types/fastify.d.ts` |
 | better-auth wrapper | `apps/api/src/lib/auth.ts` |
+
+### Workers
+
+| Pattern | Reference File |
+|---------|----------------|
+| Worker factory (BullMQ) | `apps/workers/src/workers/scoring.worker.ts` |
+| Queue configuration | `apps/workers/src/queues/config.ts` |
+| Job schema (Zod) | `packages/shared/src/jobs/scoring-job.ts` |
+| Metrics emission | `apps/workers/src/metrics.ts` |
+| Worker registration | `apps/workers/src/index.ts` |
+
+### Adapters (Scraping)
+
+| Pattern | Reference File |
+|---------|----------------|
+| Adapter interface | `packages/adapters/src/types.ts` |
+| Instagram adapter | `packages/adapters/instagram/instagram-adapter.ts` |
+| Playwright config | `packages/adapters/src/browser/config.ts` |
+| Health probe | `packages/adapters/src/health.ts` |
+| Adapter registry | `packages/adapters/src/registry.ts` |
 
 ### Frontend (web)
 
 | Pattern | Reference File |
 |---------|----------------|
 | App shell | `apps/web/src/App.vue` |
-| Page (read-only) | `apps/web/src/views/HomeView.vue` |
-| Page (form) | `apps/web/src/views/LoginView.vue` |
-| CRUD list view | `apps/web/src/views/UsersView.vue` |
+| Discovery feed page | `apps/web/src/views/DiscoveryView.vue` |
+| Search page | `apps/web/src/views/SearchView.vue` |
+| Brand detail page | `apps/web/src/views/BrandDetailView.vue` |
 | Router | `apps/web/src/router/index.ts` |
 | Pinia store | `apps/web/src/stores/auth.ts` |
-| Zod-form composable | `apps/web/src/composables/useZodForm.ts` |
+| Composable | `apps/web/src/composables/useSearch.ts` |
 | API client | `apps/web/src/lib/api.ts` |
 | Auth client | `apps/web/src/lib/auth-client.ts` |
 
@@ -41,15 +63,15 @@ Canonical examples of project patterns. Read the relevant one before implementin
 
 | Pattern | Reference File |
 |---------|----------------|
-| Validation barrel | `packages/validations/src/index.ts` |
-| Request schemas | `packages/validations/src/users/requests.ts` |
-| Response schemas | `packages/validations/src/users/responses.ts` |
-| Route schemas (combined) | `packages/validations/src/users/routes.ts` |
-| Shared timestamps schema | `packages/validations/src/shared/timestamps.ts` |
+| Job schemas | `packages/shared/src/jobs/` |
+| Brand types | `packages/shared/src/types/brand.ts` |
+| Utilities | `packages/shared/src/utils/` |
 | Drizzle client factory | `packages/db/src/client.ts` |
-| Drizzle schema | `packages/db/src/schema/users.ts` |
+| Drizzle schema (brands) | `packages/db/src/schema/brands.ts` |
+| Drizzle schema (social) | `packages/db/src/schema/social-profiles.ts` |
 | Drizzle migrations | `packages/db/drizzle/` |
-| Helpers | `packages/helpers/src/index.ts` |
+| Meilisearch client | `packages/search/src/client.ts` |
+| Redis client | `packages/redis/src/client.ts` |
 
 ## General Principles
 
@@ -58,7 +80,7 @@ Canonical examples of project patterns. Read the relevant one before implementin
 - **Simplicity** — no speculative abstractions; three repeated lines is fine, premature DRY is not.
 - **Documentation** — code should be self-documenting; only comment the *why* (constraints, invariants, gotchas).
 - **Testability** — write tests for non-trivial logic.
-- **Zod is the contract** — every cross-boundary shape lives in `@stackit/validations`.
+- **Zod for validation** — validate at system boundaries (user input, external APIs, job data).
 
 ## TypeScript & JavaScript
 
@@ -98,265 +120,446 @@ export default fp(plugin, { name: PLUGIN_NAME })
 - Single responsibility; one job per function.
 - 1–2 parameters ideal; 3+ → options object.
 - No flag parameters — split into separately named functions.
-- Pure when feasible; isolate side effects (I/O, state).
 
-**Objects & arrays**
-- Literals `{}` / `[]`, never `new Object()` / `new Array()`.
-- Shorthand: `{ name, age }`, `{ add(a, b) { /* … */ } }`.
-- Spread for copies, not mutation: `{ ...obj, c: 3 }`, `[...arr, item]`.
-- Array methods over loops: `.map`, `.filter`, `.reduce`, `.flatMap`.
-
-**Immutability**
-- Spread to copy; never mutate inputs.
-- `Object.freeze()` for shallow immutability when needed.
-- `readonly` modifiers on type properties that shouldn't change.
-
-| Operation | Avoid | Prefer |
-|-----------|-------|--------|
-| Create object | `new Object()` | `{}` |
-| Copy object | `Object.assign(obj, …)` | `{ ...obj, … }` |
-| Copy array | `arr.slice()` | `[...arr]` |
-| Add to array | `arr.push(item)` (mutates) | `[...arr, item]` |
-| Remove | `arr.splice(i, 1)` (mutates) | `arr.filter(…)` |
-| Update field | `obj.k = v` (mutates) | `{ ...obj, k: v }` |
-
-### Error handling
-
-1. **Never fail silently** — log or rethrow.
-2. **Fail fast** — throw early when invariants are violated.
-3. **Provide context** — include relevant data in the message.
-4. **Preserve the chain** — re-throw with `{ cause }`.
-
-**Throw when**: validation fails, required data missing, preconditions violated, unrecoverable state.
-
-**Catch when**: you can recover, you need to enrich context, you're at a boundary (HTTP, plugin, component), you need to convert to user-friendly output.
+**Errors**
+- Use typed error classes from `@brand-radar/shared`.
+- Throw domain errors from services: `NotFoundError`, `ConflictError`, `ValidationError`.
+- Let the error handler plugin map domain errors to HTTP status codes.
 
 ```ts
-try {
-  return await fetchUserData(userId)
-}
-catch (error) {
-  request.log.error({ error: error instanceof Error ? error.message : error, userId }, 'fetchUserData failed')
-  throw new Error(`Failed to fetch user ${userId}`, { cause: error })
-}
+// ❌ Don't throw raw Error
+if (!brand) throw new Error('Brand not found')
+
+// ✅ Do throw typed domain error
+if (!brand) throw new NotFoundError('Brand not found')
 ```
 
-See the [`javascript-expert`](../agents/javascript-expert.md) agent for anti-patterns and additional patterns.
+## Fastify Patterns
 
-## Vue 3
+### Route Modules
 
-**External reference**: [Vue Official Style Guide][Vue]
-
-### Project conventions
-
-- Components live in `apps/web/src/{views,components,layouts}/` with `PascalCase` filenames.
-- One component per file. Multi-word component names (`UserCard.vue`, not `Card.vue`).
-- `<script setup lang="ts">` only. Composition API only.
-- Order: `<script>` → `<template>` → `<style>`.
-
-Script section order:
-1. `import` statements
-2. `defineProps` / `defineEmits` / `defineModel`
-3. Composables (`useRouter`, `useAuthStore`, …)
-4. Reactive state (`ref`, `reactive`)
-5. Computed properties
-6. Lifecycle hooks (`onMounted`, etc.)
-7. Watchers (`watch`, `watchEffect`)
-8. Methods / functions
-
-**TypeScript**
-- Typed props: `defineProps<{ user: User }>()`.
-- Typed emits: `defineEmits<{ update: [user: User] }>()`.
-- No `any`.
-
-**Composables**
-- Live in `apps/web/src/composables/`.
-- `use*` prefix.
-- One composable per file.
-- Return an object with named properties: `return { data, loading, error }`.
-
-**State management**
-- Pinia, composition style.
-- Stores in `apps/web/src/stores/<feature>.ts`.
-- Lift truly shared state into stores; keep view-local state in `ref`/`reactive`.
-- Avoid prop drilling — use a store, provide/inject, or a composable.
-
-**Routing**
-- Vue Router in `apps/web/src/router/`.
-- Route names in kebab-case.
-- Navigate with `useRouter()` — never `window.location`.
-
-**Forms**
-- Zod schemas come from `@stackit/validations` — never duplicated in the frontend.
-- `useZodForm(SchemaFromValidations, initialValues)`.
-- Always provide error messages.
-- Prefer `v-model` over manual `:value` + `@input`.
-
-**Styling**
-- Tailwind v4 utility-first.
-- Use `<style scoped>` only when truly necessary.
-- Dynamic styles: `:style` binding or `v-bind()` in CSS.
-
-See the [`vue-expert`](../agents/vue-expert.md) agent for anti-patterns and the full Priority A/B checklist.
-
-## Fastify
-
-**External reference**: [Fastify Documentation][Fastify]
-
-### Project conventions
-
-- Two-tier plugin directories:
-  - `apps/api/src/plugins/external/` — third-party
-  - `apps/api/src/plugins/app/` — custom
-- One plugin per file; `kebab-case` filename.
-- Always wrap with `fastify-plugin`. Always set `name`. Declare `dependencies` when needed.
+Routes live in `apps/api/src/routes/` (flat structure) or `apps/api/src/modules/<domain>/<domain>.routes.ts` (DDD structure).
 
 ```ts
-import type { FastifyInstance } from 'fastify'
-import fp from 'fastify-plugin'
+// apps/api/src/modules/brands/brands.routes.ts
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
+import { createBrandsHandlers } from './brands.handlers.js'
+import { createBrandsService } from './brands.service.js'
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    myService: MyServiceType
+const plugin: FastifyPluginAsyncZod = async (fastify) => {
+  const service = createBrandsService(fastify.brandsRepository)
+  const handlers = createBrandsHandlers(service)
+  
+  fastify.get('/', { 
+    schema: {
+      querystring: z.object({ category: z.string().optional() }),
+      response: { 200: z.array(BrandSchema) }
+    }
+  }, handlers.list)
+  
+  fastify.get('/:id', {
+    schema: {
+      params: z.object({ id: z.string().uuid() }),
+      response: { 200: BrandSchema }
+    }
+  }, handlers.getById)
+}
+
+export default plugin
+export const autoPrefix = '/brands'
+```
+
+### Repository Pattern
+
+Repositories live in `apps/api/src/repositories/` or `apps/api/src/modules/<domain>/<domain>.repository.ts`.
+
+```ts
+// apps/api/src/repositories/brands.ts
+import type { DatabaseClient, DbClient } from '@brand-radar/db'
+import { brands } from '@brand-radar/db/schema'
+import { eq } from 'drizzle-orm'
+
+export function createBrandsRepository(db: DatabaseClient) {
+  return {
+    async findById(id: string, tx?: DbClient) {
+      return (tx ?? db).query.brands.findFirst({
+        where: eq(brands.id, id)
+      })
+    },
+    
+    async create(data: InsertBrand, tx?: DbClient) {
+      const [brand] = await (tx ?? db)
+        .insert(brands)
+        .values(data)
+        .returning()
+      return brand
+    },
+    
+    // Optional tx parameter allows transaction support
+    async updateScore(id: string, score: number, tx?: DbClient) {
+      await (tx ?? db)
+        .update(brands)
+        .set({ score, lastScoredAt: new Date() })
+        .where(eq(brands.id, id))
+    }
   }
 }
+```
 
-async function plugin(fastify: FastifyInstance) {
-  const service = createService()
-  fastify.decorate('myService', service)
+**Key points:**
+- Factory pattern: `createXRepository(db)` returns methods
+- Optional `tx` parameter for transaction support
+- Methods return plain objects, not Drizzle result types
+- Type narrowing: `(tx ?? db)` allows passing transaction or client
 
-  fastify.addHook('onClose', async () => {
-    await service.disconnect()
-  })
+## Worker Patterns (BullMQ)
+
+### Worker Factory
+
+Workers live in `apps/workers/src/workers/<name>.worker.ts`.
+
+```ts
+// apps/workers/src/workers/scoring.worker.ts
+import { Worker, Job } from 'bullmq'
+import { z } from 'zod'
+import { db } from '@brand-radar/db'
+import { redis } from '@brand-radar/redis'
+
+const ScoringJobSchema = z.object({
+  brandId: z.string().uuid()
+})
+
+type ScoringJob = z.infer<typeof ScoringJobSchema>
+
+export function createScoringWorker() {
+  return new Worker<ScoringJob>(
+    'scoring',
+    async (job: Job<ScoringJob>) => {
+      // 1. Validate job data
+      const { brandId } = ScoringJobSchema.parse(job.data)
+      
+      // 2. Perform work
+      const brand = await db.query.brands.findFirst({ 
+        where: eq(brands.id, brandId),
+        with: { socialProfiles: true }
+      })
+      
+      const score = computeScore(brand)
+      await db.update(brands).set({ score }).where(eq(brands.id, brandId))
+      
+      // 3. Emit metrics
+      metrics.jobDuration.observe(
+        { worker: 'scoring', status: 'success' },
+        (Date.now() - job.timestamp) / 1000
+      )
+      
+      // 4. Enqueue downstream job
+      await job.queue.add('indexing', { brandId }, { priority: 5 })
+      
+      return { brandId, score }
+    },
+    {
+      connection: redis,
+      concurrency: 10,
+      limiter: { max: 500, duration: 60000 }
+    }
+  )
 }
-
-export default fp(plugin, { name: 'my-plugin' })
 ```
 
-**Routes**
-- One file per domain in `apps/api/src/routes/`.
-- Export `autoPrefix = '/feature'`.
-- Schemas come from `@stackit/validations/<feature>/routes`.
+**Key points:**
+- Validate job data with Zod at the start
+- Emit Prometheus metrics for observability
+- Enqueue downstream jobs after successful completion
+- Return structured result for logging
 
-**Validation**
-- `fastify-type-provider-zod` — Zod is the single schema language.
-- No TypeBox, no JSON Schema literals, no AJV directly.
+## Adapter Patterns (Scraping)
 
-**Error handling**
-- Global handler at `apps/api/src/plugins/app/error-handler.ts`.
-- Use `request.server.httpErrors.*` (from `@fastify/sensible`) for canonical status codes.
-- Preserve original errors with `{ cause }` when converting.
+### Adapter Implementation
 
-**Hooks & lifecycle**
-- `onClose` for cleanup (DB disconnect, cache quit).
-- `close-with-grace` wraps `server.ts` for graceful shutdown.
-- Plugin order: external → app → routes.
-
-See the [`fastify-expert`](../agents/fastify-expert.md) agent for anti-patterns.
-
-## PostgreSQL & Drizzle ORM
-
-**External reference**: [Drizzle Documentation][Drizzle]
-
-### Project conventions
-
-**Package layout**
-- Drizzle client + schema at `packages/db/`.
-- Schema files under `packages/db/src/schema/<domain>.ts`, re-exported from `schema/index.ts`.
-- Migrations under `packages/db/drizzle/` — committed to git.
-- `drizzle.config.ts` loads `.env` from the monorepo root (it knows where it lives).
-
-**Client**
-- Factory pattern: `createDatabaseClient({ url })` returns a Drizzle instance with `$disconnect` attached.
-- Driver: `postgres` (postgres-js). Do not mix with `pg`.
+Adapters live in `packages/adapters/<source>/<source>-adapter.ts`.
 
 ```ts
-const queryClient = postgres(url)
-const db = drizzle(queryClient, { schema, casing: 'snake_case' })
+// packages/adapters/instagram/instagram-adapter.ts
+import type { ScraperAdapter, AdapterHealth } from '../types.js'
+import { createBrowserContext } from '../browser/config.js'
+
+export const instagramAdapter: ScraperAdapter = {
+  id: 'instagram-v1',
+  sourceType: 'instagram',
+  rateLimit: { requestsPerMinute: 5, cooldownMs: 12000 },
+  
+  async extract(profileUrl: string) {
+    const { browser, context } = await createBrowserContext()
+    
+    try {
+      const page = await context.newPage()
+      await page.goto(profileUrl, { waitUntil: 'networkidle' })
+      
+      // Extract from meta tags (more stable than DOM scraping)
+      const ogDescription = await page
+        .locator('meta[property="og:description"]')
+        .getAttribute('content')
+      
+      const followers = ogDescription?.match(/(\d+) Followers/)?.[1]
+      const name = await page.locator('h2').first().textContent()
+      
+      return {
+        name: name?.trim(),
+        source: 'instagram',
+        sourceUrl: profileUrl,
+        metadata: { followers: parseInt(followers || '0') }
+      }
+    } finally {
+      await browser.close()
+    }
+  },
+  
+  async probe() {
+    try {
+      await this.extract('https://www.instagram.com/byredo/')
+      return { adapterId: this.id, status: 'healthy', lastProbeAt: new Date() }
+    } catch (error) {
+      return { 
+        adapterId: this.id, 
+        status: 'down', 
+        lastProbeAt: new Date(),
+        errorMessage: error.message
+      }
+    }
+  }
+}
 ```
 
-**Schema conventions**
-- Table objects in `camelCase`; SQL column names map to `snake_case` via `casing` config.
-- `uuid().primaryKey().defaultRandom()` for IDs (unless the domain dictates `text()` like better-auth's `sessions.id`).
-- Always include `createdAt` and `updatedAt` (the latter with `$onUpdate(() => new Date())`).
-- Declare `relations()` bidirectionally when joins are needed.
-- Foreign keys: `references(() => other.id, { onDelete: 'cascade' })` when appropriate.
+**Key points:**
+- Implement `ScraperAdapter` interface
+- Use Playwright with `createBrowserContext()` helper
+- Extract from meta tags (more stable than DOM)
+- Implement `probe()` health check with known-good URL
+- Always close browser in `finally` block
+
+## Vue Patterns
+
+### Composition API
+
+Use `<script setup lang="ts">` only.
+
+```vue
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useBrandsStore } from '@/stores/brands'
+
+const router = useRouter()
+const brandsStore = useBrandsStore()
+
+const searchQuery = ref('')
+const filteredBrands = computed(() => 
+  brandsStore.brands.filter(b => 
+    b.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+)
+
+async function selectBrand(id: string) {
+  await router.push(`/brands/${id}`)
+}
+</script>
+
+<template>
+  <div class="space-y-4">
+    <input v-model="searchQuery" type="text" placeholder="Search brands..." />
+    <BrandCard
+      v-for="brand in filteredBrands"
+      :key="brand.id"
+      :brand="brand"
+      @click="selectBrand(brand.id)"
+    />
+  </div>
+</template>
+```
+
+### Pinia Stores
+
+Stores live in `apps/web/src/stores/<feature>.ts`.
 
 ```ts
-export const users = pgTable('users', {
-  id: uuid().primaryKey().defaultRandom(),
-  email: text().notNull().unique(),
-  name: text().notNull(),
-  createdAt: timestamp().notNull().defaultNow(),
-  updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+// apps/web/src/stores/brands.ts
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { api } from '@/lib/api'
+
+export const useBrandsStore = defineStore('brands', () => {
+  const brands = ref<Brand[]>([])
+  const loading = ref(false)
+  
+  const brandsByCategory = computed(() => {
+    return brands.value.reduce((acc, brand) => {
+      const category = brand.category || 'uncategorized'
+      acc[category] = acc[category] || []
+      acc[category].push(brand)
+      return acc
+    }, {} as Record<string, Brand[]>)
+  })
+  
+  async function fetchBrands() {
+    loading.value = true
+    try {
+      const response = await api.get('/brands')
+      brands.value = response.data
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  return {
+    brands,
+    loading,
+    brandsByCategory,
+    fetchBrands
+  }
 })
 ```
 
-**Query patterns**
-- Relational API (`db.query.users.findFirst`, `findMany`) for typed ergonomic queries — use this first.
-- Builder API (`select / insert / update / delete`) for aggregates, set ops, or raw `sql`.
-- `.returning()` on writes that need the row back.
-- `db.transaction(async (tx) => …)` for atomicity; pass `tx` into repository methods.
+## Drizzle Patterns
 
-**Repository pattern**
-- One file per domain: `apps/api/src/repositories/<feature>.ts`.
-- Factory function taking the `DatabaseClient`.
-- Each method accepts `tx?: DbClient` so it can join an outer transaction.
-- Drizzle types never leak past the repository boundary.
+### Schema Definition
 
-**Error handling**
-- `postgres` driver throws `PostgresError` with SQLSTATE `code` fields.
-- Map known codes to HTTP errors:
-  - `23505` unique violation → 409
-  - `23503` FK violation → 400
-  - `23502` not-null → 400
-  - `23514` check constraint → 400
-- See the [`drizzle-expert`](../agents/drizzle-expert.md) agent for the full pattern.
+Schema files live in `packages/db/src/schema/<domain>.ts`.
 
-**Migrations**
-- `pnpm db:generate` after every schema change. Inspect the SQL diff before applying.
-- `pnpm db:push` for dev (skips migration history, fast for prototyping).
-- `pnpm db:migrate` for prod path (writes to `_journal.json`).
-- Never edit an already-applied migration file — create a new one.
+```ts
+// packages/db/src/schema/brands.ts
+import { pgTable, uuid, text, timestamp, numeric, jsonb } from 'drizzle-orm/pg-core'
 
-**pgvector** (opt-in)
-- Add `CREATE EXTENSION IF NOT EXISTS vector;` to a new migration manually.
-- Declare columns: `vector('embedding', { dimensions: 1536 })`.
-- Index with HNSW or IVFFlat in the migration's manual SQL section.
-- Query with `cosineDistance` / `l2Distance` / `innerProduct` — fully typed.
+export const brands = pgTable('brands', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  websiteUrl: text('website_url'),
+  logoUrl: text('logo_url'),
+  foundedYear: numeric('founded_year'),
+  category: text('category'),
+  
+  // Scoring
+  score: numeric('score', { precision: 5, scale: 2 }).default('0'),
+  scoreVersion: numeric('score_version').default('1'),
+  lastScoredAt: timestamp('last_scored_at'),
+  
+  // Metadata
+  metadata: jsonb('metadata').default({}),
+  
+  // Timestamps
+  discoveredAt: timestamp('discovered_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+})
+```
 
-## Redis (optional)
+**Key points:**
+- One table per file
+- `snake_case` column names (Drizzle maps from camelCase)
+- Use `defaultRandom()` for UUIDs
+- Use `defaultNow()` for timestamps
+- Use `jsonb` for flexible metadata
 
-**External reference**: [Redis Documentation][Redis]
+## Anti-Patterns
 
-### Project conventions
+### ❌ Don't
 
-- `packages/cache/` exports `createCacheClient({ host, port })`.
-- Fastify plugin at `apps/api/src/plugins/app/redis.ts` decorates `fastify.cache`.
-- Call `await cache.connect()` in the plugin; `await cache.quit()` in the `onClose` hook (not `disconnect()`).
+**Don't use `any`**
+```ts
+// ❌ Bad
+function process(data: any) { ... }
 
-**Key naming**
-- Colon separator: `resource:id` or `resource:id:field`.
-- Domain prefix: `user:123`, `session:abc`, `rate:ip:127.0.0.1`.
+// ✅ Good
+function process(data: unknown) {
+  if (typeof data === 'object' && data !== null) { ... }
+}
+```
 
-**Common operations**
-- `get(key)` / `set(key, value)`
-- `setEx(key, seconds, value)` — set with TTL
-- `del(key)` / `exists(key)`
-- `expire(key, seconds)` — set TTL on existing key
-- `incr(key)` / `decr(key)` — atomic counters
+**Don't skip validation**
+```ts
+// ❌ Bad — trust job data
+async function worker(job: Job) {
+  const { brandId } = job.data
+}
 
-**Caching strategies**
-- **Cache-aside**: check cache → miss → fetch DB → cache result with TTL.
-- **TTL**: always set expiration — stale data is worse than no cache.
-- **Invalidation**: delete the key on mutation.
-- **Prefix scan**: `user:*` for bulk invalidation.
+// ✅ Good — validate with Zod
+const schema = z.object({ brandId: z.string().uuid() })
+async function worker(job: Job) {
+  const { brandId } = schema.parse(job.data)
+}
+```
 
-**Resilience**
-- Cache failures must not break the app — log and fall back to DB.
-- Wrap cache reads in try/catch on critical paths.
+**Don't hardcode URLs or credentials**
+```ts
+// ❌ Bad
+const apiUrl = 'https://api.example.com'
 
-[Vue]: https://vuejs.org/style-guide/
-[Fastify]: https://fastify.dev/docs/latest/
-[Drizzle]: https://orm.drizzle.team/docs/overview
-[Redis]: https://redis.io/docs/
+// ✅ Good
+const apiUrl = env.API_URL
+```
+
+**Don't mix concerns**
+```ts
+// ❌ Bad — handler does business logic
+async function handler(request, reply) {
+  const existing = await db.query.brands.findFirst(...)
+  if (existing) throw new Error('Brand exists')
+  const brand = await db.insert(brands).values(...)
+  return { brand }
+}
+
+// ✅ Good — handler delegates to service
+async function handler(request, reply) {
+  const brand = await brandsService.create(request.body)
+  return reply.code(201).send({ brand })
+}
+```
+
+### ✅ Do
+
+**Do validate at boundaries**
+- HTTP requests (Fastify schema)
+- Worker jobs (Zod schema in worker)
+- External API responses (Zod schema)
+- User input (Zod schema in forms)
+
+**Do emit metrics**
+- Worker success/failure rates
+- Job durations
+- Queue depths
+- API response times
+
+**Do write integration tests**
+- Test routes end-to-end (request → DB → response)
+- Test workers end-to-end (enqueue → process → result)
+- Test adapters with health probes
+
+**Do follow DRY**
+- Extract repeated logic to functions
+- Share types in `@brand-radar/shared`
+- Reuse Zod schemas across API and web
+
+## Common Mistakes
+
+1. **Forgetting to close Playwright browser** → memory leaks
+2. **Not validating job data** → worker crashes on malformed input
+3. **Skipping health probes** → silent adapter failures
+4. **Hardcoding rate limits** → getting blocked by platforms
+5. **Not using transactions** → partial updates on errors
+6. **Mixing service logic in handlers** → hard to test
+7. **Not emitting metrics** → blind to production issues
+
+## Quick Reference
+
+| What | Where | Pattern |
+|------|-------|---------|
+| API route | `apps/api/src/modules/<domain>/<domain>.routes.ts` | Fastify plugin, autoPrefix |
+| Repository | `apps/api/src/repositories/<domain>.ts` | Factory, optional `tx` |
+| Worker | `apps/workers/src/workers/<name>.worker.ts` | BullMQ Worker, Zod validation |
+| Adapter | `packages/adapters/<source>/<source>-adapter.ts` | ScraperAdapter interface |
+| Vue view | `apps/web/src/views/<Name>View.vue` | `<script setup>` |
+| Pinia store | `apps/web/src/stores/<feature>.ts` | Composition API |
+| DB schema | `packages/db/src/schema/<domain>.ts` | `pgTable`, snake_case |
+| Job schema | `packages/shared/src/jobs/<name>-job.ts` | Zod schema |

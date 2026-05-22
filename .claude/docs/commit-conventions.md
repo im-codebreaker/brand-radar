@@ -1,6 +1,6 @@
 # Commit Conventions
 
-stackit follows the **[Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)** specification, adapted to the monorepo so the scope tells you *where* in the workspace a change landed.
+Brand Radar follows the **[Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)** specification, adapted to the monorepo so the scope tells you *where* in the workspace a change landed.
 
 ## Format
 
@@ -40,8 +40,8 @@ From the Conventional Commits spec, plus a couple of common Angular-flavored ext
 
 Two equivalent ways to mark a breaking change:
 
-1. **`!` after the scope**: `feat(api)!: rename users.list response shape`
-2. **Footer**: `BREAKING CHANGE: response.users renamed to response.items`
+1. **`!` after the scope**: `feat(api)!: rename brands.list response shape`
+2. **Footer**: `BREAKING CHANGE: response.brands renamed to response.items`
 
 Either bumps MAJOR semver. Use the footer if you want to explain the migration path; use `!` for a terse signal.
 
@@ -53,15 +53,19 @@ Scope describes the **area of the monorepo** affected. Always lowercase. One sco
 |-------|---------|------|
 | `api` | `apps/api/**` | Backend code: plugins, routes, handlers, repositories, lib, server. |
 | `web` | `apps/web/**` | Frontend code: views, components, composables, stores, router. |
+| `workers` | `apps/workers/**` | BullMQ workers: job processors, queue config, worker registration. |
+| `scheduler` | `apps/scheduler/**` | Cron job scheduler: scheduled discovery runs, periodic tasks. |
 | `db` | `packages/db/**` | Drizzle schema, migrations (`drizzle/`), client factory, seed script. |
-| `auth` | `packages/auth/**` | better-auth wrapper. (Optional module — only when the package is present.) |
-| `cache` | `packages/cache/**` | Redis client. (Optional module.) |
-| `validations` | `packages/validations/**` | Shared Zod schemas. |
-| `types` | `packages/types/**` | Pure TypeScript types and API envelopes. |
-| `helpers` | `packages/helpers/**` | Shared utilities. |
+| `search` | `packages/search/**` | Meilisearch client, index configuration, sync strategies. |
+| `redis` | `packages/redis/**` | Redis client, queue configuration, cache utilities. |
+| `adapters` | `packages/adapters/**` | Scraping adapters: Instagram, TikTok, web crawlers, health probes. |
+| `shared` | `packages/shared/**` | Shared utilities, types, job schemas, validators. |
+| `ai` | `packages/ai/**` | Embeddings, NLP utilities, semantic search (Phase 3). |
+| `taxonomy` | `packages/taxonomy/**` | Brand classification, category mapping. |
+| `auth` | `packages/auth/**` | better-auth wrapper, session management. |
 | `config` | `packages/config/**` | tsconfig and eslint-config packages. |
 | `infra` | `Dockerfile`, `docker-compose.yml`, `infrastructure/**` | Docker, nginx, deployment plumbing. |
-| `repo` | Root `package.json`, `scripts/init.ts`, `pnpm-workspace.yaml`, `.gitignore` | Workspace-level config. |
+| `repo` | Root `package.json`, `pnpm-workspace.yaml`, `.gitignore` | Workspace-level config. |
 | `deps` | Any `package.json` dependency bump that touches multiple packages or is cross-cutting | Dependency-only commits. |
 | `docs` | `README.md`, `.claude/docs/**`, in-repo `*.md` files | Documentation-only commits. |
 | `tooling` | `.claude/**`, `eslint.config.*`, `tsconfig.json` at the workspace level | Developer-tooling-only commits. |
@@ -83,9 +87,9 @@ Conventional Commits 1.0.0 only allows a single scope. If a change spans areas, 
 **Preferred**: split into multiple commits, one per scope.
 
 ```
-fix(validations): add SignUpSchema for email + password
-feat(api): wire SignUpSchema into /v1/auth/sign-up
-feat(web): bind SignUpSchema to LoginView form
+feat(shared): add ScoringJobSchema for brand scoring
+feat(workers): implement scoring worker with BullMQ
+feat(api): expose /brands/:id/score endpoint
 ```
 
 This makes `git log` readable and `git bisect` precise.
@@ -93,125 +97,238 @@ This makes `git log` readable and `git bisect` precise.
 **Fallback**: use the broadest applicable scope (often `api` or `repo`) and list the touched areas in the body.
 
 ```
-refactor(repo): consolidate env loading across api and web
+refactor(repo): consolidate brand types across packages
 
-- apps/api/src/config/env.ts now validates with shared Zod schema
-- apps/web/src/lib/env.ts no longer duplicates fields
-- packages/validations/src/env.ts is the new source of truth
+- packages/shared/src/types/brand.ts is now the source of truth
+- apps/api/src/types/brand.ts removed (duplicated fields)
+- apps/web/src/types/brand.ts now imports from @brand-radar/shared
 ```
 
-## Description
+### Examples by scope
 
-- Imperative mood: "add", "fix", "rename" — not "added", "fixes", "renaming".
-- Lowercase first letter.
-- No trailing period.
-- ≤ 72 chars total for the subject line (so it doesn't truncate in `git log --oneline`).
-
-| Bad | Good |
-|-----|------|
-| `feat(api): Added new endpoint.` | `feat(api): add /v1/projects list endpoint` |
-| `fix(web): fixes the login form bug` | `fix(web): clear LoginView errors on schema reset` |
-| `chore: bump deps` | `chore(deps): bump drizzle-orm to ^0.46.1` |
-
-## Body
-
-Use the body to explain **why**, not what. The diff already shows what changed.
-
-Wrap at ~72 columns. Blank line between subject and body.
+#### api
 
 ```
-fix(db): load monorepo .env from drizzle.config and align .env.example to host-run
-
-drizzle-kit invokes the config from packages/db/, so the previous
-`import 'dotenv/config'` only saw packages/db/.env (which doesn't exist)
-and DATABASE_URL came through empty. Resolve the .env path relative to
-the config file so any cwd works.
-
-Also flip .env.example's DATABASE_URL from the docker-internal hostname
-to localhost — the README's recommended flow runs apps + tooling on the
-host, where `postgres` does not resolve.
+feat(api): add /v1/brands/:id/social-profiles endpoint
+fix(api): handle missing brand in getBrandById handler
+refactor(api): extract brand service from handlers
 ```
 
-## Footers
-
-- **`BREAKING CHANGE: <description>`** — explain the breaking change and how to migrate.
-- **`Closes #<n>`** / **`Fixes #<n>`** / **`Refs #<n>`** — link to issues / PRs.
-- **`Reviewed-by: <person>`** — for trail when a co-reviewer signed off.
-
-### What we explicitly do NOT include
-
-- **No `Co-Authored-By: Claude` (or similar) trailers.** `.claude/settings.json` sets `includeCoAuthoredBy: false` so the CLI won't add one automatically. If you want to credit a human collaborator, add a regular `Co-Authored-By:` line for that person.
-
-## Examples
-
-### Common cases
+#### web
 
 ```
-feat(api): add /v1/projects routes with pagination
-feat(web): add ProjectsView with infinite scroll
-fix(db): handle drizzle migration race in db:reset
-fix(api): return 409 on email unique-violation (SQLSTATE 23505)
-refactor(web): extract UserCard to components/ui/
-perf(api): cache user-by-id with redis for 60s
-docs(repo): document pnpm setup pruning flow
-test(api): cover users CRUD against a real postgres
-chore(deps): bump drizzle-orm to ^0.46.1
-build(infra): drop prisma generate step from Dockerfile
-ci(repo): add type-check + lint gate to the PR workflow
-style(web): apply tailwind utility ordering pass
+feat(web): add discovery feed with infinite scroll
+fix(web): correct brand card image aspect ratio
+refactor(web): extract BrandFilters to composable
 ```
 
-### Breaking change with `!`
+#### workers
 
 ```
-feat(api)!: rename users.list response shape
-
-response.users renamed to response.items, response.total renamed to response.count.
+feat(workers): add enrichment worker for social stats
+fix(workers): handle extraction timeout in normalization worker
+perf(workers): batch brand scoring updates to reduce DB calls
 ```
 
-### Breaking change with footer
+#### scheduler
 
 ```
-refactor(db): migrate from Prisma to Drizzle ORM
-
-Drizzle ships first-class pgvector support and a smaller runtime
-footprint, covering both classic CRUD and AI/RAG workloads.
-
-BREAKING CHANGE: @stackit/db no longer exports PrismaClient. Consumers
-must use DatabaseClient from @stackit/db and import query helpers (eq,
-sql, desc) from drizzle-orm directly.
+feat(scheduler): add daily Instagram discovery cron job
+fix(scheduler): correct timezone handling in scheduled tasks
 ```
 
-### Revert
+#### db
 
 ```
-revert: feat(api): add /v1/projects routes with pagination
-
-This reverts commit 1a2b3c4d5e — the route depends on a projects table
-that hasn't been migrated yet.
+feat(db): add social_profiles table with snapshots
+fix(db): add missing index on brands.slug
+refactor(db): split schema into domain-specific files
 ```
 
-## Quick reference card
+#### search
 
 ```
-<type>(<scope>): <imperative description, ≤ 72 chars, no period>
-
-<body wrapped at ~72 cols — explain why, not what>
-
-<optional footers: BREAKING CHANGE / Closes #N / Reviewed-by:>
+feat(search): configure typo tolerance for brand search
+fix(search): correct facet filtering on category field
 ```
 
-Types: `feat fix refactor perf docs test build ci chore style revert`
+#### adapters
 
-Scopes: `api web db auth cache validations types helpers config infra repo deps docs tooling`
+```
+feat(adapters): add Instagram hashtag crawler adapter
+fix(adapters): handle rate limiting in TikTok adapter
+perf(adapters): reduce Playwright memory usage with browser pooling
+```
 
-Breaking: `<type>(<scope>)!:` or `BREAKING CHANGE:` footer.
+#### shared
 
-## Why these rules
+```
+feat(shared): add BrandSchema with Zod validation
+refactor(shared): consolidate error types in errors.ts
+```
 
-- **Conventional Commits** gives us automated changelogs, semver bumps, and consistent history.
-- **Monorepo scopes** let `git log --grep` find every change to a package in one filter.
-- **One scope per commit** keeps `git bisect` precise and PR diffs reviewable.
-- **No Claude attribution** keeps history attributed to the humans who own the change.
+#### infra
 
-The full specification is at [conventionalcommits.org/en/v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/).
+```
+feat(infra): add nginx reverse proxy config
+fix(infra): correct Meilisearch container healthcheck
+```
+
+#### deps
+
+```
+chore(deps): bump drizzle-orm to ^0.46
+chore(deps): upgrade Playwright to v1.40
+```
+
+#### docs
+
+```
+docs(docs): update pipeline architecture with scoring flow
+docs(brand-platform): add adapter health probe patterns
+```
+
+## Common Patterns
+
+### Feature additions
+
+```
+feat(api): add trend detection endpoint
+feat(web): implement brand comparison view
+feat(workers): add scoring worker with rule-based algorithm
+feat(adapters): add Reddit adapter for brand mentions
+```
+
+### Bug fixes
+
+```
+fix(api): return 404 when brand not found
+fix(workers): prevent duplicate discovery jobs
+fix(adapters): handle Instagram captcha gracefully
+```
+
+### Refactoring
+
+```
+refactor(api): extract brand repository from handlers
+refactor(workers): standardize error handling across workers
+refactor(web): convert BrandCard to composition API
+```
+
+### Documentation
+
+```
+docs(docs): add adapter implementation guide
+docs(brand-platform): update scoring system formula
+docs(repo): explain worker queue topology
+```
+
+### Dependencies
+
+```
+chore(deps): bump fastify to 5.1.0
+chore(deps): upgrade Vue to 3.5
+```
+
+### Breaking changes
+
+```
+feat(api)!: rename brands.status to brands.reviewStatus
+
+BREAKING CHANGE: The `status` field on brand objects has been renamed to
+`reviewStatus` to avoid confusion with HTTP status codes. Update API clients
+to use the new field name.
+```
+
+## Anti-Patterns
+
+### ❌ Don't
+
+**Don't use vague descriptions**
+```
+fix(api): fix bug
+feat(web): update UI
+```
+
+**Don't mix concerns**
+```
+feat(api): add brand scoring endpoint and fix bug in discovery
+```
+Split into two commits instead.
+
+**Don't skip the scope**
+```
+feat: add brand scoring
+```
+Always include scope: `feat(workers): add brand scoring worker`
+
+**Don't use past tense**
+```
+fix(api): fixed brand query bug
+```
+Use imperative mood: `fix(api): fix brand query bug`
+
+### ✅ Do
+
+**Do be specific**
+```
+fix(workers): handle extraction timeout in normalization worker
+feat(adapters): add Instagram hashtag discovery
+```
+
+**Do split cross-cutting changes**
+```
+feat(shared): add BrandScoringSchema
+feat(workers): implement scoring worker
+feat(api): expose scoring endpoint
+```
+
+**Do use imperative mood**
+```
+fix(api): correct brand score calculation
+refactor(web): extract brand filters to composable
+```
+
+## Commit Message Template
+
+```
+<type>(<scope>): <short summary>
+
+<optional body explaining why, not what>
+
+<optional footer for breaking changes or issue refs>
+```
+
+### Example
+
+```
+feat(workers): add enrichment worker for social stats
+
+Fetches Instagram and TikTok follower counts for brands that have
+social profiles. Runs daily via scheduler and enqueues indexing
+job after completion.
+
+Closes #42
+```
+
+## Tools
+
+### commitlint
+
+Brand Radar enforces commit conventions via `commitlint` in the pre-commit hook. Invalid commits are rejected with a helpful error message.
+
+### Commitizen (optional)
+
+For interactive commit message prompts:
+
+```bash
+pnpm exec cz
+```
+
+This guides you through type, scope, description, body, and footer.
+
+## References
+
+- [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
+- [Angular Commit Guidelines](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit)
+- [Semantic Versioning 2.0.0](https://semver.org/)
