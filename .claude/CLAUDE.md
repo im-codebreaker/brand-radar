@@ -310,6 +310,46 @@ Delegate to subagents when the task is domain-specific. Each agent encodes proje
 | [`fastify-expert`](./agents/fastify-expert.md) | Plugins, routes, hooks, autoload, error handling, better-auth integration |
 | [`vue-expert`](./agents/vue-expert.md) | Components, composables, Pinia stores, Vue Router |
 | [`javascript-expert`](./agents/javascript-expert.md) | TypeScript refactors, error handling, general TS/JS patterns |
+| [`scraping-expert`](./agents/scraping-expert.md) | Browser automation, Playwright setup, scraping logic, selector management |
+| [`pipeline-expert`](./agents/pipeline-expert.md) | Data pipeline architecture, ETL flows, Meilisearch integration, queue operations |
+
+## Documentation Structure
+
+### Core Documentation
+
+These documents define stackit's architecture and conventions:
+
+- **[Architecture](./docs/architecture.md)** — System diagram, package dependencies, request lifecycle, data flow
+- **[Style Guide](./docs/style-guide.md)** — Code conventions, anti-patterns, framework-specific best practices
+- **[Commit Conventions](./docs/commit-conventions.md)** — Conventional Commits adapted to stackit's monorepo scopes
+
+### Brand Radar Platform Guides
+
+Domain-specific guides for the brand-radar scraping and data platform:
+
+- **[Platform Overview](./docs/brand-platform/overview.md)** — System architecture, core components, data model
+- **[Scraping Pipeline](./docs/brand-platform/pipeline.md)** — ETL workflow, data processing, Meilisearch indexing
+- **[Schema Design](./docs/brand-platform/schema.md)** — Database tables, relationships, indexing strategy
+- **[Source Adapters](./docs/brand-platform/adapters.md)** — Building custom adapters, Playwright patterns, data extraction
+
+### Architecture Decision Records (ADRs)
+
+Design decisions that shaped the platform:
+
+- **[ADR-001: Playwright-Only Approach](./docs/decisions/001-playwright-only.md)** — Why we chose Playwright for all browser automation
+- **[ADR-002: Meilisearch Over OpenSearch](./docs/decisions/002-meilisearch-not-opensearch.md)** — Search indexing technology choice
+- **[ADR-003: Adapter vs Source Separation](./docs/decisions/003-adapter-vs-source-separation.md)** — Module architecture for extensibility
+
+### When to Use Which Agent
+
+| Task | Primary Agent | Secondary |
+|------|---------------|-----------|
+| Schema changes, migrations, queries | `drizzle-expert` | `javascript-expert` |
+| API routes, plugins, error handling | `fastify-expert` | `javascript-expert` |
+| Vue components, stores, composables | `vue-expert` | `javascript-expert` |
+| TypeScript refactors, patterns | `javascript-expert` | — |
+| Browser automation, web scraping | `scraping-expert` | `pipeline-expert` |
+| Data pipelines, ETL, indexing | `pipeline-expert` | `scraping-expert` |
 
 ## Common Tasks
 
