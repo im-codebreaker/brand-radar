@@ -4,7 +4,7 @@ export interface AuthClientConfig {
   baseURL: string
 }
 
-export function createStackitAuthClient(config: AuthClientConfig) {
+export function initiAuthClient(config: AuthClientConfig) {
   return createAuthClient({ baseURL: config.baseURL })
 }
 

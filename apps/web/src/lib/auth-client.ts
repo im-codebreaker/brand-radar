@@ -1,6 +1,5 @@
-// OPTIONAL — pruned by `pnpm setup` if better-auth declined.
-import { createStackitAuthClient } from '@brand-radar/auth/client'
+import { initiAuthClient } from '@brand-radar/auth/client'
 
-export const authClient = createStackitAuthClient({
+export const authClient = initiAuthClient({
   baseURL: `${import.meta.env.VITE_API_URL || '/api'}/v1/auth`,
 })

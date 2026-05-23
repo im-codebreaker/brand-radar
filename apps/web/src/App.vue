@@ -9,12 +9,6 @@ import { RouterLink, RouterView } from 'vue-router'
         <RouterLink to="/" class="text-lg font-semibold">
           brand-radar
         </RouterLink>
-        <RouterLink to="/users" class="text-sm hover:underline">
-          Users
-        </RouterLink>
-        <span class="ml-auto text-xs text-slate-500">
-          Vue 3 + Fastify + Drizzle
-        </span>
       </nav>
     </header>
     <main class="mx-auto max-w-5xl px-6 py-10">

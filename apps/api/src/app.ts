@@ -22,6 +22,15 @@ export async function build(opts: Record<string, unknown> = {}) {
   // Make Zod transform available to swagger plugin via decorator
   app.decorate('jsonSchemaTransform', jsonSchemaTransform)
 
+  // Global request logger - see ALL incoming requests
+  app.addHook('onRequest', async (request) => {
+    request.log.info({
+      method: request.method,
+      url: request.url,
+      routeUrl: request.routeOptions?.url,
+    }, 'Incoming request')
+  })
+
   await app.register(autoLoad, {
     dir: join(__dirname, 'plugins/external'),
   })
@@ -41,6 +50,12 @@ export async function build(opts: Record<string, unknown> = {}) {
   await app.register(autoLoad, {
     dir: join(__dirname, 'routes'),
     options: { prefix: '/api/v1' },
+  })
+
+  // Log all registered routes
+  app.ready(() => {
+    const routes = app.printRoutes({ commonPrefix: false })
+    app.log.info({ routes: routes.split('\n') }, 'Registered routes')
   })
 
   return app

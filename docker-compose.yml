@@ -99,10 +99,13 @@ services:
       BASE_URL: http://localhost
       FRONTEND_URL: http://localhost
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-in-production-please}
-      BETTER_AUTH_URL: http://localhost
+      BETTER_AUTH_URL: http://localhost/api/v1/auth
     labels:
       traefik.http.routers.api.rule: Host(`localhost`) && PathPrefix(`/api`)
       traefik.http.services.api.loadbalancer.server.port: 3000
+    volumes:
+      - ./apps/api:/brand-radar/apps/api:delegated
+      - ./packages:/brand-radar/packages:delegated
     depends_on:
       postgres:
         condition: service_healthy
@@ -110,16 +113,6 @@ services:
         condition: service_healthy
       opensearch:
         condition: service_healthy
-    develop:
-      watch:
-        - path: ./apps/api/src
-          action: sync
-          target: /brand-radar/apps/api/src
-        - path: ./packages
-          action: sync
-          target: /brand-radar/packages
-        - path: ./apps/api/package.json
-          action: rebuild
 
   ###################################################
   # Workers — background job processors
@@ -135,6 +128,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       OPENSEARCH_NODE: http://opensearch:9200
+    volumes:
+      - ./apps/workers:/brand-radar/apps/workers:delegated
+      - ./packages:/brand-radar/packages:delegated
     depends_on:
       postgres:
         condition: service_healthy
@@ -142,16 +138,6 @@ services:
         condition: service_healthy
       opensearch:
         condition: service_healthy
-    develop:
-      watch:
-        - path: ./apps/workers/src
-          action: sync
-          target: /brand-radar/apps/workers/src
-        - path: ./packages
-          action: sync
-          target: /brand-radar/packages
-        - path: ./apps/workers/package.json
-          action: rebuild
 
   ###################################################
   # Scheduler — cron job manager
@@ -167,6 +153,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       OPENSEARCH_NODE: http://opensearch:9200
+    volumes:
+      - ./apps/scheduler:/brand-radar/apps/scheduler:delegated
+      - ./packages:/brand-radar/packages:delegated
     depends_on:
       postgres:
         condition: service_healthy
@@ -174,16 +163,6 @@ services:
         condition: service_healthy
       opensearch:
         condition: service_healthy
-    develop:
-      watch:
-        - path: ./apps/scheduler/src
-          action: sync
-          target: /brand-radar/apps/scheduler/src
-        - path: ./packages
-          action: sync
-          target: /brand-radar/packages
-        - path: ./apps/scheduler/package.json
-          action: rebuild
 
   ###################################################
   # Web — Vue 3 SPA via Vite, also exposed directly on :5173
@@ -196,20 +175,16 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: /api
+      VITE_API_URL: ${VITE_API_URL:-/api}
       VITE_API_PROXY_TARGET: http://api:3000
+    volumes:
+      - ./apps/web:/brand-radar/apps/web:delegated
+      - ./packages:/brand-radar/packages:delegated
     labels:
       traefik.http.routers.web.rule: Host(`localhost`)
       traefik.http.services.web.loadbalancer.server.port: 5173
     depends_on:
       - api
-    develop:
-      watch:
-        - path: ./apps/web/src
-          action: sync
-          target: /brand-radar/apps/web/src
-        - path: ./apps/web/package.json
-          action: rebuild
 
 volumes:
   postgres-data:
