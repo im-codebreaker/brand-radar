@@ -10,6 +10,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 const apiTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000'
 
 export default defineConfig({
+  envDir: '../..', // Load .env from monorepo root
   plugins: [
     vue(),
     vueDevTools(),
@@ -18,6 +19,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@brand-radar/auth/client': fileURLToPath(new URL('../../packages/auth/src/client.ts', import.meta.url)),
     },
   },
   server: {
