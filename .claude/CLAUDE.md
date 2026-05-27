@@ -2,7 +2,15 @@
 
 > Discover, resolve, and rank emerging fashion and perfume brands from social platforms and the web.
 
-Brand Radar is a pipeline-driven intelligence platform that discovers brand signals, resolves entities, enriches metadata, scores relevance, and surfaces insights through a searchable dashboard.
+Brand Radar is a **pipeline-driven, event-sourced intelligence platform** that discovers brand signals, resolves entities, enriches metadata, scores relevance, and surfaces insights through a searchable dashboard.
+
+**v2 Architecture** (event-sourced, fully traceable):
+- Every pipeline action emits to the `system_events` event backbone
+- Full `trace_id` propagation for end-to-end debugging
+- Idempotent workers via `processed_jobs` table
+- Pipeline versioning for safe evolution and replay
+- Cost governance and data quality scoring
+- Separation of deterministic and AI enrichment
 
 ## Tech Stack
 
@@ -270,7 +278,7 @@ See [Style Guide](./docs/style-guide.md) for full conventions.
 
 ## Database Patterns (Drizzle)
 
-- Schema in TS under `packages/db/src/schema/` — one file per domain (`brands.ts`, `social-profiles.ts`).
+- Schema in TS under `packages/db/src/schema/` — one file per domain (`canonical-entities.ts`, `brand-identities.ts`, `adapters.ts`, `sources.ts`, `raw-discoveries.ts`).
 - `casing: 'snake_case'` in `drizzle.config.ts` maps camelCase TS columns to snake_case SQL automatically.
 - Migrations under `packages/db/drizzle/` — committed to git.
 - Repository pattern keeps Drizzle types confined to `repositories/` and `@brand-radar/db`.
