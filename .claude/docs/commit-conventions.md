@@ -140,8 +140,8 @@ fix(scheduler): correct timezone handling in scheduled tasks
 #### db
 
 ```
-feat(db): add social_profiles table with snapshots
-fix(db): add missing index on brands.slug
+feat(db): add entity resolution pipeline with canonical_entities
+fix(db): add missing index on canonical_entities.slug
 refactor(db): split schema into domain-specific files
 ```
 
