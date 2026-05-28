@@ -39,6 +39,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: brand-radar-redis
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
@@ -50,31 +51,22 @@ services:
       retries: 5
 
   ###################################################
-  # OpenSearch — full-text search engine
+  # Meilisearch — fast, typo-tolerant search engine
   ###################################################
-  opensearch:
-    image: opensearchproject/opensearch:2
-    container_name: brand-radar-opensearch
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    container_name: brand-radar-meilisearch
     environment:
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - DISABLE_SECURITY_PLUGIN=true
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
+      MEILI_ENV: ${MEILI_ENV:-development}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
+      MEILI_NO_ANALYTICS: ${MEILI_NO_ANALYTICS:-true}
     ports:
-      - "9200:9200"
-      - "9600:9600"
+      - "7700:7700"
     volumes:
-      - opensearch-data:/usr/share/opensearch/data
+      - meilisearch-data:/meili_data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7700/health || exit 1"]
+      interval: 5s
       timeout: 5s
       retries: 5
 
@@ -91,9 +83,10 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      OPENSEARCH_NODE: http://opensearch:9200
+      REDIS_URL: redis://redis:6379
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
+      ACTIVE_PIPELINE_VERSION: ${ACTIVE_PIPELINE_VERSION:-1.0.0}
       API_HOST: 0.0.0.0
       API_PORT: 3000
       BASE_URL: http://localhost
@@ -111,7 +104,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      opensearch:
+      meilisearch:
         condition: service_healthy
 
   ###################################################
@@ -125,9 +118,10 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      OPENSEARCH_NODE: http://opensearch:9200
+      REDIS_URL: redis://redis:6379
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
+      ACTIVE_PIPELINE_VERSION: ${ACTIVE_PIPELINE_VERSION:-1.0.0}
     volumes:
       - ./apps/workers:/brand-radar/apps/workers:delegated
       - ./packages:/brand-radar/packages:delegated
@@ -136,7 +130,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      opensearch:
+      meilisearch:
         condition: service_healthy
 
   ###################################################
@@ -150,9 +144,10 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-brand-radar}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      OPENSEARCH_NODE: http://opensearch:9200
+      REDIS_URL: redis://redis:6379
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
+      ACTIVE_PIPELINE_VERSION: ${ACTIVE_PIPELINE_VERSION:-1.0.0}
     volumes:
       - ./apps/scheduler:/brand-radar/apps/scheduler:delegated
       - ./packages:/brand-radar/packages:delegated
@@ -161,7 +156,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      opensearch:
+      meilisearch:
         condition: service_healthy
 
   ###################################################
@@ -189,4 +184,4 @@ services:
 volumes:
   postgres-data:
   redis-data:
-  opensearch-data:
+  meilisearch-data:
