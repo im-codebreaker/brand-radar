@@ -64,11 +64,6 @@ services:
       - "7700:7700"
     volumes:
       - meilisearch-data:/meili_data
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7700/health || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   ###################################################
   # API — Fastify backend, also exposed directly on :3000
