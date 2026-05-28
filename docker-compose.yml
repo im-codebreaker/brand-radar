@@ -100,7 +100,7 @@ services:
       redis:
         condition: service_healthy
       meilisearch:
-        condition: service_healthy
+        condition: service_started
 
   ###################################################
   # Workers — background job processors
@@ -126,7 +126,7 @@ services:
       redis:
         condition: service_healthy
       meilisearch:
-        condition: service_healthy
+        condition: service_started
 
   ###################################################
   # Scheduler — cron job manager
@@ -152,7 +152,7 @@ services:
       redis:
         condition: service_healthy
       meilisearch:
-        condition: service_healthy
+        condition: service_started
 
   ###################################################
   # Web — Vue 3 SPA via Vite, also exposed directly on :5173
