@@ -76,24 +76,81 @@ cd brand-radar
 pnpm install
 ```
 
-### 2. Start Infrastructure
+### 2. Start Full Stack with Docker
+
+```bash
+docker compose up -d
+```
+
+This starts the complete stack with **Traefik** as reverse proxy:
+- **PostgreSQL 16** with pgvector (port 5432)
+- **Redis 7** with appendonly persistence (port 6379)
+- **Meilisearch v1.10** for full-text search (port 7700)
+- **API** (Fastify) via Traefik → http://localhost/api
+- **Web** (Vue 3) via Traefik → http://localhost
+- **Workers** (BullMQ) background processing
+- **Scheduler** cron-based jobs
+- **Traefik Dashboard** → http://localhost:8080
+
+**Access the application:**
+- **Frontend:** http://localhost
+- **API:** http://localhost/api
+- **API Health:** http://localhost/api/health
+- **Traefik Dashboard:** http://localhost:8080
+
+### 3. Setup Database
+
+```bash
+# Access API container
+docker compose exec api sh
+
+# Run migrations and seed
+pnpm db:push        # Create tables from Drizzle schema
+pnpm db:seed        # Seed demo brands and categories
+
+# Exit container
+exit
+```
+
+### 4. Verify Setup
+
+```bash
+# Check API health
+curl http://localhost/api/health
+
+# Check Traefik dashboard
+open http://localhost:8080
+
+# Check queue status
+docker compose exec redis redis-cli
+> LLEN bull:discovery:wait
+
+# View logs
+docker compose logs -f api
+docker compose logs -f workers
+```
+
+**✅ Done! Access the application at http://localhost**
+
+---
+
+## Alternative: Local Development (Host Run)
+
+If you prefer running apps on your host with hot reload:
+
+### 1. Start Infrastructure Only
 
 ```bash
 docker compose up -d postgres redis meilisearch
 ```
 
-This starts:
-- **PostgreSQL 16** with pgvector (port 5432)
-- **Redis 7** with appendonly persistence (port 6379)
-- **Meilisearch** for full-text search (port 7700)
-
-### 3. Configure Environment
+### 2. Configure Environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` if needed (defaults work for local dev):
+Edit `.env`:
 
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/brand_radar
@@ -102,14 +159,14 @@ MEILISEARCH_URL=http://localhost:7700
 ACTIVE_PIPELINE_VERSION=1.0.0
 ```
 
-### 4. Setup Database
+### 3. Setup Database
 
 ```bash
-pnpm db:push        # Create tables from Drizzle schema
-pnpm db:seed        # Seed demo brands and categories
+pnpm db:push        # Create tables
+pnpm db:seed        # Seed data
 ```
 
-### 5. Start Development
+### 4. Start Development
 
 ```bash
 pnpm dev
@@ -121,18 +178,10 @@ This starts all apps in parallel:
 - **Workers** (BullMQ) → background processing
 - **Scheduler** → cron-based discovery jobs
 
-**Open http://localhost:5173** to access the dashboard.
-
-### 6. Verify Setup
-
-```bash
-# Check API health
-curl http://localhost:3000/health
-
-# Check queue status
-pnpm redis-cli
-> LLEN bull:discovery:wait
-```
+**Access:**
+- **Frontend:** http://localhost:5173
+- **API:** http://localhost:3000
+- **API Health:** http://localhost:3000/health
 
 ---
 
@@ -503,6 +552,7 @@ Filter logs: `jq 'select(.traceId == "tr_abc123xyz")'`
 DATABASE_URL=postgresql://user:pass@host:5432/brand_radar
 REDIS_URL=redis://host:6379
 MEILISEARCH_URL=http://host:7700
+MEILISEARCH_MASTER_KEY=your-master-key-here
 BETTER_AUTH_SECRET=your-secret-key-here
 
 # Optional
@@ -510,6 +560,7 @@ ACTIVE_PIPELINE_VERSION=2.1.0
 S3_ENDPOINT=https://s3.amazonaws.com
 S3_BUCKET=brand-radar-raw
 OPENAI_API_KEY=sk-...                      # Phase 2
+MEILI_ENV=production
 ```
 
 ### Docker Compose (Production)
@@ -528,11 +579,17 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes  # CRITICAL: persistence
+    volumes:
+      - redis_data:/data
 
   meilisearch:
-    image: getmeili/meilisearch:latest
+    image: getmeili/meilisearch:v1.10
     environment:
-      MEILI_MASTER_KEY: ${MEILI_KEY}
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_NO_ANALYTICS: true
+    volumes:
+      - meilisearch_data:/meili_data
 
   api:
     build:
@@ -541,14 +598,25 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY}
+      ACTIVE_PIPELINE_VERSION: ${ACTIVE_PIPELINE_VERSION:-2.1.0}
     depends_on:
       - postgres
       - redis
+      - meilisearch
 
   workers:
     build:
       context: .
       target: workers-prod
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      ACTIVE_PIPELINE_VERSION: ${ACTIVE_PIPELINE_VERSION:-2.1.0}
+    depends_on:
+      - postgres
+      - redis
     deploy:
       replicas: 3  # Scale per queue
 ```
