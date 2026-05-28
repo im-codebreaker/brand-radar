@@ -1,278 +1,683 @@
 # Brand Radar
 
-> AI-powered brand intelligence platform — monitor, analyze, and discover brands across the web.
+> **Discover emerging brands before everyone else.**
 
-A comprehensive brand monitoring and analysis system built with Vue 3, Fastify, and a modern AI/ML stack. Track brand mentions, analyze sentiment, discover emerging brands, and gain competitive intelligence through automated web crawling and natural language processing.
+A pipeline-driven, event-sourced intelligence platform that discovers, resolves, and ranks emerging fashion and perfume brands from social platforms and the web — with full traceability from discovery to insight.
 
-## Features
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-- 🔍 **Brand Discovery** — Automated web crawling and social media monitoring
-- 🤖 **AI Classification** — ML-powered brand categorization and taxonomy
-- 📊 **Sentiment Analysis** — NLP-based sentiment tracking across sources
-- 🔎 **Semantic Search** — Vector embeddings for intelligent brand discovery
-- 📈 **Trend Analysis** — Track brand mentions and sentiment over time
-- ⚡ **Real-time Alerts** — Configurable notifications for brand mentions
-- 🌐 **Multi-source** — Web, social media, news, and custom sources
+---
 
-## Stack
+## Why Brand Radar?
 
-| Layer        | Technology                                                           |
-| ------------ | -------------------------------------------------------------------- |
-| Frontend     | Vue 3.5, Vite 7, Pinia, Vue Router, Tailwind v4, ECharts, Cytoscape |
-| API          | Fastify 5, autoload, Zod validation, DDD architecture               |
-| Workers      | BullMQ, Playwright, Cheerio, Proxy rotation, User-agent spoofing    |
-| AI/ML        | Transformers.js, embeddings, NLP, classification                     |
-| Search       | OpenSearch (full-text + semantic), pgvector (embeddings)            |
-| Database     | PostgreSQL + pgvector, Drizzle ORM                                   |
-| Cache/Queue  | Redis + BullMQ job queues                                            |
-| Auth         | better-auth with credential provider                                 |
-| Tooling      | TypeScript, ESLint (antfu), Vitest, Docker, Traefik                 |
+### The Problem
+Trend agencies, fashion scouts, and brand intelligence teams manually track emerging brands across Instagram, TikTok, Reddit, and niche forums. It's **slow, expensive, and incomplete**.
 
-## Quickstart
+### The Solution
+Brand Radar automates discovery, resolution, and scoring with a fully traceable pipeline:
 
-**Local dev (recommended)** — apps run on host, infra in Docker:
+- ✅ **Event-sourced from day one** — every pipeline action is recorded, replay any stage at any time
+- ✅ **Idempotent workers** — safe retries, no duplicate processing, cost-controlled
+- ✅ **Production-ready** — built for scale with Drizzle, BullMQ, Meilisearch, and pgvector
+- ✅ **Deterministic before AI** — core pipeline works without AI; embeddings and classification are optional acceleration
+- ✅ **Full traceability** — `trace_id` propagation from discovery to scoring, debug any entity's full lineage
+
+### Why Not Just Use...?
+
+| Alternative | Why Brand Radar is Different |
+|-------------|------------------------------|
+| **Manual tracking** | Automated discovery across 4+ sources, processes 1000+ brands/day |
+| **Generic web scrapers** | Purpose-built for brand intelligence with entity resolution, anti-bot stealth, and quality scoring |
+| **Social listening tools** | Goes beyond mentions — resolves entities, tracks ecommerce signals, scores uniqueness |
+| **Build it yourself** | Production-ready with event sourcing, idempotency, cost governance, and backfill engine built in |
+
+---
+
+## Architecture Highlights
+
+### Event-Sourced Core
+Every mutation emits to the `system_events` backbone. Never lose context. Always reproducible.
+
+```
+Discovery → Extraction → Normalization → Resolution → Enrichment → Scoring → Indexing
+     ↓          ↓              ↓              ↓            ↓           ↓          ↓
+  event      event          event          event        event       event      event
+```
+
+Every stage:
+- ✅ Checks `processed_jobs` for idempotency
+- ✅ Emits to `system_events` with `trace_id` + `pipeline_version`
+- ✅ Propagates trace context to downstream jobs
+- ✅ Safe to retry, replay, or backfill
+
+### Pipeline Versioning
+Change your pipeline logic without losing history. The `pipeline_versions` table tracks DAG definitions. Run v1 and v2 in parallel, compare outputs, then cutover.
+
+### Cost Governance
+AI is expensive. The `cost_events` table tracks every OpenAI/proxy call. Daily budgets prevent runaway costs. AI enrichment is **always async, always cost-gated**.
+
+### Data Quality First
+The `data_quality_scores` table tracks completeness, freshness, consistency, and source reliability per entity. Quality gates scoring — stale data scores lower.
+
+---
+
+## Quick Start
+
+### Prerequisites
+- **Node.js** 22+ and **pnpm** 9+
+- **Docker** 24+ and **Docker Compose** 2.20+
+
+### 1. Clone & Install
 
 ```bash
 git clone git@github.com:im-codebreaker/brand-radar.git
 cd brand-radar
 pnpm install
-cp .env.example .env                    # configure DATABASE_URL, REDIS_HOST, etc.
-docker compose up -d postgres redis opensearch
-pnpm db:push                            # create tables
-pnpm db:seed                            # seed dev users (password: password123)
-pnpm dev                                # api :3000, web :5173, workers, scheduler
 ```
 
-**Full stack in Docker** — everything containerized with hot-reload:
+### 2. Start Infrastructure
+
+```bash
+docker compose up -d postgres redis meilisearch
+```
+
+This starts:
+- **PostgreSQL 16** with pgvector (port 5432)
+- **Redis 7** with appendonly persistence (port 6379)
+- **Meilisearch** for full-text search (port 7700)
+
+### 3. Configure Environment
 
 ```bash
 cp .env.example .env
-docker compose up --build --watch       # traefik, postgres, redis, opensearch, api, web, workers, scheduler
 ```
 
-Open <http://localhost>. Traefik routes:
-- `/` → Vue web app
-- `/api` → Fastify API
-- `/docs` → Swagger UI
+Edit `.env` if needed (defaults work for local dev):
 
-Traefik dashboard: <http://localhost:8080>
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/brand_radar
+REDIS_URL=redis://localhost:6379
+MEILISEARCH_URL=http://localhost:7700
+ACTIVE_PIPELINE_VERSION=1.0.0
+```
 
-**Development accounts:**
-- `admin@brand-radar.dev` / `password123`
-- `analyst@brand-radar.dev` / `password123`
-- `viewer@brand-radar.dev` / `password123`
-- `demo@brand-radar.dev` / `password123`
+### 4. Setup Database
 
-## Architecture
+```bash
+pnpm db:push        # Create tables from Drizzle schema
+pnpm db:seed        # Seed demo brands and categories
+```
+
+### 5. Start Development
+
+```bash
+pnpm dev
+```
+
+This starts all apps in parallel:
+- **API** (Fastify) → http://localhost:3000
+- **Web** (Vue 3) → http://localhost:5173
+- **Workers** (BullMQ) → background processing
+- **Scheduler** → cron-based discovery jobs
+
+**Open http://localhost:5173** to access the dashboard.
+
+### 6. Verify Setup
+
+```bash
+# Check API health
+curl http://localhost:3000/health
+
+# Check queue status
+pnpm redis-cli
+> LLEN bull:discovery:wait
+```
+
+---
+
+## Tech Stack
+
+### Core
+
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| **Frontend** | Vue 3.5 + Vite 7 + Pinia + Tailwind v4 | Reactive, fast, composable |
+| **API** | Fastify 5 + Zod + Drizzle | Type-safe, fast, clean architecture |
+| **Workers** | BullMQ + Playwright + Redis | Reliable job queues, stealth scraping |
+| **Database** | PostgreSQL 16 + pgvector | ACID + vector embeddings |
+| **Search** | Meilisearch | Fast, typo-tolerant, faceted search |
+| **Cache** | Redis 7 (appendonly) | Job queues + rate limiting |
+| **Storage** | S3/MinIO | Immutable raw HTML/JSON for replay |
+| **Auth** | better-auth | Session-based, extensible |
+
+### Phase 2 (AI)
+
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| **Embeddings** | OpenAI `text-embedding-3-small` | 1536-dim vectors, cost-efficient |
+| **Semantic Search** | pgvector HNSW index | Fast cosine similarity search |
+| **Classification** | LLM-based (GPT-4o-mini) | Auto-categorization with confidence |
+
+---
+
+## Project Structure
 
 ```
 brand-radar/
 ├── apps/
-│   ├── api/                    # Fastify API with DDD modules
-│   │   ├── modules/            # Domain modules (users, brands, mentions, etc.)
-│   │   │   └── users/          # Example: routes → handlers → service → repository
-│   │   ├── plugins/            # Fastify plugins (db, redis, auth, error-handler)
-│   │   └── routes/             # Standalone routes (health, auth catch-all)
+│   ├── api/                    # Fastify REST API
+│   │   ├── modules/            # DDD modules (brands, discovery, admin)
+│   │   ├── plugins/            # Fastify plugins (db, redis, search, auth)
+│   │   └── server.ts
 │   ├── web/                    # Vue 3 SPA
-│   │   ├── views/              # Page components
+│   │   ├── views/              # Discovery feed, search, brand detail, admin
 │   │   ├── components/         # Reusable UI components
-│   │   ├── stores/             # Pinia stores
-│   │   └── composables/        # Vue composables
-│   ├── workers/                # Background job processors
-│   │   ├── crawl/              # Web scraping workers (Playwright + Cheerio)
-│   │   ├── social/             # Social media monitoring
-│   │   └── ai/                 # ML/NLP processing
-│   └── scheduler/              # Cron-based job scheduler (BullMQ)
+│   │   ├── stores/             # Pinia stores (brands, events, search)
+│   │   └── composables/        # useSearch, useBrands, etc.
+│   ├── workers/                # BullMQ job processors
+│   │   └── src/workers/
+│   │       ├── discovery.worker.ts       # Crawl sources
+│   │       ├── extraction.worker.ts      # Parse raw data
+│   │       ├── normalization.worker.ts   # Clean & dedupe
+│   │       ├── resolution.worker.ts      # Entity matching
+│   │       ├── enrichment.worker.ts      # Deterministic enrichment
+│   │       ├── ai-enrichment.worker.ts   # Async AI processing
+│   │       ├── scoring.worker.ts         # Compute scores
+│   │       └── indexing.worker.ts        # Sync to Meilisearch
+│   └── scheduler/              # Cron-based job orchestration
 ├── packages/
-│   ├── shared/                 # Types, schemas (Zod), DTOs, utils
 │   ├── db/                     # Drizzle ORM + PostgreSQL schema
-│   ├── redis/                  # Redis client + BullMQ queue definitions
-│   ├── search/                 # OpenSearch client + index management
-│   ├── ai/                     # Transformers.js, embeddings, NLP utilities
-│   ├── taxonomy/               # Brand classification + category hierarchy
-│   ├── auth/                   # better-auth wrapper
-│   └── config/                 # Shared tsconfig + eslint-config
-└── docker-compose.yml          # Full infrastructure stack
+│   │   ├── src/schema/
+│   │   │   ├── canonical-entities.ts     # Core brand entities
+│   │   │   ├── system-events.ts          # Event backbone
+│   │   │   ├── processed-jobs.ts         # Idempotency tracking
+│   │   │   ├── pipeline-versions.ts      # DAG definitions
+│   │   │   ├── cost-events.ts            # Budget tracking
+│   │   │   └── data-quality-scores.ts    # Quality metrics
+│   │   └── drizzle/            # Migrations (committed to git)
+│   ├── search/                 # Meilisearch client
+│   ├── redis/                  # Redis client + queue definitions
+│   ├── adapters/               # Scraping adapters (Instagram, TikTok, web)
+│   ├── shared/                 # Zod schemas, types, utilities
+│   ├── ai/                     # Embeddings, NLP (Phase 2)
+│   ├── taxonomy/               # Brand classification
+│   └── auth/                   # better-auth wrapper
+└── .claude/                    # Documentation & agents
+    ├── docs/
+    │   ├── architecture.md
+    │   ├── brand-platform/
+    │   │   ├── overview.md             # Strategic vision
+    │   │   ├── pipeline.md             # Worker orchestration
+    │   │   ├── schema.md               # Database design
+    │   │   └── adapters.md             # Scraping patterns
+    │   └── decisions/          # ADRs
+    └── agents/                 # Specialized Claude agents
 ```
 
-## Services
+---
 
-| Service      | Purpose                                    | Port |
-| ------------ | ------------------------------------------ | ---- |
-| PostgreSQL   | Primary database with pgvector             | 5432 |
-| Redis        | Cache + BullMQ job queues                  | 6379 |
-| OpenSearch   | Full-text + semantic search                | 9200 |
-| API          | Fastify backend                            | 3000 |
-| Web          | Vue 3 frontend                             | 5173 |
-| Workers      | Background jobs (crawling, AI processing)  | —    |
-| Scheduler    | Cron job orchestration                     | —    |
-| Traefik      | Reverse proxy + load balancer              | 80   |
+## Key Concepts
 
-## Domain-Driven Design (DDD)
+### Event Sourcing
 
-API follows clean architecture with domain modules:
-
-```
-modules/users/
-├── users.routes.ts        # Fastify plugin, route definitions
-├── users.handlers.ts      # HTTP layer (request/response)
-├── users.service.ts       # Business logic + domain errors
-└── users.repository.ts    # Data access (Drizzle queries)
-```
-
-**Dependency flow:** routes → handlers → service → repository
-
-**Adding a new domain:**
-
-1. Create `modules/<domain>/<domain>.{routes,handlers,service,repository}.ts`
-2. Define Zod schemas in `packages/shared/src/schemas/<domain>/`
-3. Add repository to `plugins/core/repositories.ts`
-4. Register types in `types/fastify.d.ts`
-
-## Background Jobs
-
-**Workers** process jobs from Redis queues:
+Every pipeline action emits an event to `system_events`:
 
 ```typescript
-// packages/redis/src/queues/crawl.ts
-export const crawlQueue = createQueue('crawl')
-
-// apps/workers/src/crawl/scraper.ts
-crawlQueue.process(async (job) => {
-  const html = await scrapeUrl(job.data.url)
-  const brands = await extractBrands(html)
-  await indexBrands(brands)
+await emitEvent({
+  traceId: job.data.traceId,
+  eventType: 'entity.resolved',
+  entityId: entity.id,
+  pipelineVersion: job.data.pipelineVersion,
+  payload: { confidence: 0.95, matchedVia: 'url_domain' },
 })
 ```
 
-**Scheduler** enqueues jobs on cron schedules:
+**Benefits:**
+- Full replay from raw data
+- Debug entity lineage (where did this brand come from?)
+- ML training data (resolution decisions, merge signals)
+- Auditable intelligence (every score has a trail)
+
+### Idempotency
+
+Every worker checks `processed_jobs` before execution:
 
 ```typescript
-// apps/scheduler/src/schedules/daily-crawl.ts
-cron.schedule('0 2 * * *', async () => {
-  await crawlQueue.add('daily-crawl', { sources: ['web', 'social'] })
+const idempotencyKey = `scoring:${entityId}:${pipelineVersion}`
+const alreadyProcessed = await db.query.processedJobs.findFirst({
+  where: eq(processedJobs.idempotencyKey, idempotencyKey),
+})
+
+if (alreadyProcessed) return  // Skip — already scored
+```
+
+**Benefits:**
+- Safe retries (network failures, rate limits)
+- Backfills don't double-write
+- Manual re-triggers are safe
+
+### Trace Propagation
+
+Every job carries `traceId` + `pipelineVersion` from discovery to indexing:
+
+```typescript
+// Discovery worker generates trace_id
+const traceId = generateTraceId()  // "tr_abc123xyz"
+
+// Downstream workers inherit it
+await extractionQueue.add('extract', {
+  candidateUrl,
+  traceId: job.data.traceId,
+  pipelineVersion: job.data.pipelineVersion,
 })
 ```
 
-## AI/ML Pipeline
+**Benefits:**
+- Filter logs by `traceId` — see full entity lifecycle
+- Query `system_events` by `traceId` — find where pipeline broke
+- Grafana traces for end-to-end latency
 
-1. **Crawl** — Workers scrape web/social with Playwright + Cheerio
-2. **Extract** — Parse brand mentions, products, sentiment
-3. **Classify** — Transformers.js models categorize brands (taxonomy)
-4. **Embed** — Generate vector embeddings for semantic search
-5. **Index** — Store in OpenSearch + PostgreSQL (pgvector)
-6. **Analyze** — Sentiment analysis, trend detection, alerts
+### Pipeline Versioning
 
-## Scripts
+The `pipeline_versions` table stores DAG definitions:
 
-| Command             | What it does                                          |
-| ------------------- | ----------------------------------------------------- |
-| `pnpm dev`          | Run all apps in parallel (api, web, workers, scheduler) |
-| `pnpm build`        | Build every workspace                                 |
-| `pnpm lint`         | ESLint across the repo                                |
-| `pnpm test`         | Vitest across api + web                               |
-| `pnpm type-check`   | tsc / vue-tsc across all packages                     |
-| `pnpm db:generate`  | Generate Drizzle migration from schema changes        |
-| `pnpm db:migrate`   | Apply pending migrations                              |
-| `pnpm db:push`      | Push schema to DB (dev only, no migration)            |
-| `pnpm db:seed`      | Seed database with dev users + accounts               |
-| `pnpm db:studio`    | Open Drizzle Studio (database GUI)                    |
-
-## Key Technologies
-
-### Validation (Zod)
-
-Single source of truth for schemas:
-
-```typescript
-// packages/shared/src/schemas/brands/requests.ts
-export const CreateBrandSchema = z.object({
-  name: z.string().min(1),
-  website: z.string().url(),
-  category: z.string(),
-})
-
-// API: typed request/response
-fastify.post('/', { schema: brands.routes.createBrandRoute }, handlers.create)
-
-// Web: form validation
-const { form, errors } = useZodForm(CreateBrandSchema, { /* defaults */ })
+```json
+{
+  "name": "core-pipeline",
+  "version": "2.1.0",
+  "dag": {
+    "stages": [
+      { "id": "discovery", "next": "extraction" },
+      { "id": "extraction", "next": "normalization" },
+      ...
+    ]
+  }
+}
 ```
 
-### Search (OpenSearch + pgvector)
+**Benefits:**
+- Run v1 and v2 in parallel (blue/green deployment)
+- Backfill with old pipeline version for comparison
+- Never lose reproducibility when logic changes
 
-Hybrid search combining full-text and semantic:
+---
+
+## Development Workflow
+
+### Adding a New Worker
+
+1. **Define job schema** in `packages/shared`:
 
 ```typescript
-// Full-text search
-const results = await search.brands.search({ query: 'sustainable fashion' })
-
-// Semantic search (vector similarity)
-const embedding = await ai.embed('eco-friendly clothing')
-const similar = await db.query.brands.findMany({
-  where: cosineDistance(brands.embedding, embedding) < 0.3,
+export const MyJobSchema = z.object({
+  entityId: z.string(),
+  traceId: z.string(),
+  pipelineVersion: z.string(),
 })
 ```
 
-### Web Scraping
-
-Playwright for JavaScript-heavy sites, Cheerio for static HTML:
+2. **Create worker** in `apps/workers/src/workers/my-job.worker.ts`:
 
 ```typescript
-// apps/workers/src/crawl/scraper.ts
-const browser = await playwright.chromium.launch()
-const page = await browser.newPage()
-await page.goto(url, { userAgent: randomUserAgent() })
-const html = await page.content()
-const $ = cheerio.load(html)
-const brands = $('.brand-mention').map((i, el) => $(el).text()).get()
+export function createMyJobWorker() {
+  return new Worker('my_job', async (job) => {
+    const { entityId, traceId, pipelineVersion } = MyJobSchema.parse(job.data)
+
+    // Idempotency check
+    const key = `my_job:${entityId}:${pipelineVersion}`
+    if (await isProcessed(key)) return
+
+    // Do work...
+
+    // Mark processed
+    await markProcessed(key)
+
+    // Emit event
+    await emitEvent({ traceId, eventType: 'my_job.completed', ... })
+  })
+}
 ```
 
-### AI/ML (Transformers.js)
+3. **Register queue** in `apps/workers/src/index.ts`
 
-On-device inference with ONNX Runtime:
+4. **Write integration test** that verifies idempotency + event emission
+
+See [Pipeline Architecture](/.claude/docs/brand-platform/pipeline.md) for full patterns.
+
+### Adding a New Scraping Adapter
+
+1. **Create adapter** in `packages/adapters/<source>/`:
 
 ```typescript
-// packages/ai/src/embeddings/generate.ts
-import { pipeline } from '@xenova/transformers'
+export const myAdapter: ScraperAdapter = {
+  id: 'my-source',
+  sourceType: 'website',
 
-const embedder = await pipeline('feature-extraction', 'sentence-transformers/all-MiniLM-L6-v2')
-const embedding = await embedder(text, { pooling: 'mean', normalize: true })
+  async discover(query: DiscoveryQuery): AsyncGenerator<RawCandidate> {
+    // Yield candidates...
+  },
+
+  async extract(url: string): Promise<ExtractedBrand> {
+    // Extract structured data...
+  },
+
+  async probe(): Promise<AdapterHealth> {
+    // Health check...
+  },
+}
 ```
 
-## Environment Variables
+2. **Register** in `packages/adapters/src/registry.ts`
+
+3. **Configure** via admin UI → Sources → Add Source
+
+See [Adapter Strategy](/.claude/docs/brand-platform/adapters.md) for anti-bot patterns.
+
+### Adding a New API Module
+
+1. **Define schema** in `packages/shared/src/schemas/<domain>/`:
+
+```typescript
+export const CreateItemSchema = z.object({ name: z.string() })
+```
+
+2. **Create module** in `apps/api/src/modules/<domain>/`:
+
+```
+modules/items/
+├── items.routes.ts        # Fastify plugin, autoPrefix = '/items'
+├── items.handlers.ts      # HTTP layer (request/response)
+├── items.service.ts       # Business logic
+└── items.repository.ts    # Drizzle queries
+```
+
+3. **Register repository** in `apps/api/src/plugins/app/repositories.ts`
+
+4. **Add types** to `apps/api/src/types/fastify.d.ts`
+
+See [Architecture](/.claude/docs/architecture.md) for DDD patterns.
+
+---
+
+## Commands Reference
+
+### Development
 
 ```bash
-# Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/brand-radar
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# OpenSearch
-OPENSEARCH_NODE=http://localhost:9200
-
-# API
-API_HOST=0.0.0.0
-API_PORT=3000
-BASE_URL=http://localhost
-FRONTEND_URL=http://localhost
-
-# better-auth
-BETTER_AUTH_SECRET=your-secret-key-here
-BETTER_AUTH_URL=http://localhost
+pnpm dev                    # Start all apps (api, web, workers, scheduler)
+pnpm dev:api                # Start API only
+pnpm dev:web                # Start web only
+pnpm dev:workers            # Start workers only
 ```
 
-## Project Goals
+### Database
 
-- **Fast MVP** — Ship a working brand monitoring MVP quickly
-- **Scalable** — Handle thousands of brands and millions of mentions
-- **Modular** — Easy to add new sources, classifiers, or features
-- **Type-safe** — End-to-end TypeScript with Zod validation
-- **AI-ready** — Built for ML/NLP from day one (embeddings, classification)
-- **Production-grade** — Docker, migrations, seeding, error handling, tests
+```bash
+pnpm db:generate            # Generate migration from schema diff
+pnpm db:migrate             # Apply pending migrations
+pnpm db:push                # Push schema directly (dev only)
+pnpm db:reset               # Drop all tables + push
+pnpm db:seed                # Seed demo data
+pnpm db:studio              # Open Drizzle Studio
+```
+
+### Quality
+
+```bash
+pnpm lint                   # ESLint across workspace
+pnpm lint:fix               # Auto-fix issues
+pnpm type-check             # TypeScript across workspace
+pnpm test                   # Vitest (api + web)
+pnpm test:watch             # Watch mode
+pnpm build                  # Build all apps
+```
+
+### Docker
+
+```bash
+docker compose up -d                        # Start infra only
+docker compose up --build --watch           # Full stack with hot reload
+docker compose logs -f api                  # Follow API logs
+docker compose exec postgres psql -U postgres -d brand_radar
+```
+
+---
+
+## Observability
+
+### Trace ID Explorer
+
+Query `system_events` by `trace_id` to see full entity lineage:
+
+```sql
+SELECT event_type, entity_id, created_at, payload
+FROM system_events
+WHERE trace_id = 'tr_abc123xyz'
+ORDER BY created_at;
+```
+
+### Event Debug Viewer (Admin UI)
+
+- Navigate to **Admin → Events**
+- Search by `trace_id`, `entity_id`, or `event_type`
+- See full pipeline execution for any entity
+
+### Prometheus Metrics
+
+```
+worker_jobs_processed_total{queue="scoring", status="success"}
+worker_job_duration_seconds{queue="scoring"}
+queue_depth{queue="discovery"}
+adapter_success_rate{adapter="instagram"}
+cost_events_total{service="openai"}
+```
+
+### Logs
+
+All logs include `traceId` and `pipelineVersion`:
+
+```json
+{
+  "level": "info",
+  "time": "2026-05-27T09:15:00Z",
+  "traceId": "tr_abc123xyz",
+  "pipelineVersion": "2.1.0",
+  "event": "job.completed",
+  "worker": "scoring",
+  "entityId": "123",
+  "score": 87.5
+}
+```
+
+Filter logs: `jq 'select(.traceId == "tr_abc123xyz")'`
+
+---
+
+## Production Deployment
+
+### Environment Variables
+
+```bash
+# Required
+DATABASE_URL=postgresql://user:pass@host:5432/brand_radar
+REDIS_URL=redis://host:6379
+MEILISEARCH_URL=http://host:7700
+BETTER_AUTH_SECRET=your-secret-key-here
+
+# Optional
+ACTIVE_PIPELINE_VERSION=2.1.0
+S3_ENDPOINT=https://s3.amazonaws.com
+S3_BUCKET=brand-radar-raw
+OPENAI_API_KEY=sk-...                      # Phase 2
+```
+
+### Docker Compose (Production)
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: brand_radar
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes  # CRITICAL: persistence
+
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_KEY}
+
+  api:
+    build:
+      context: .
+      target: api-prod
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  workers:
+    build:
+      context: .
+      target: workers-prod
+    deploy:
+      replicas: 3  # Scale per queue
+```
+
+### Health Checks
+
+- **API:** `GET /health` → `{ status: "ok", uptime: 12345 }`
+- **Workers:** Check queue depth via Redis CLI
+- **Database:** Query `system_events` — should see recent events
+
+---
+
+## Cost Governance
+
+### Budget Enforcement
+
+AI enrichment is **always gated**:
+
+```typescript
+if (!await checkDailyBudget('openai')) {
+  await pauseQueue('ai_enrichment')
+  await emitAlert('daily_ai_budget_exceeded')
+  return
+}
+```
+
+### Cost Tracking
+
+Query `cost_events` for spend breakdown:
+
+```sql
+SELECT service, SUM(cost_usd) as total_cost
+FROM cost_events
+WHERE created_at >= NOW() - INTERVAL '7 days'
+GROUP BY service;
+```
+
+### Confidence Thresholds
+
+AI only fires when confidence > 0.6:
+
+```typescript
+if (entity.discoveryConfidence < AI_CONFIDENCE_THRESHOLD) {
+  logger.info('Skipping AI enrichment — low confidence')
+  return
+}
+```
+
+---
+
+## Documentation
+
+- **[Architecture Overview](/.claude/docs/architecture.md)** — System design, event sourcing, trace propagation
+- **[Pipeline Architecture](/.claude/docs/brand-platform/pipeline.md)** — Workers, queues, scoring, idempotency
+- **[Schema Design](/.claude/docs/brand-platform/schema.md)** — Database tables, event backbone, pgvector
+- **[Adapter Strategy](/.claude/docs/brand-platform/adapters.md)** — Anti-bot tactics, Playwright config
+- **[Style Guide](/.claude/docs/style-guide.md)** — Code conventions, naming, TypeScript patterns
+- **[Commit Conventions](/.claude/docs/commit-conventions.md)** — Conventional Commits for monorepo
+
+### Architecture Decision Records (ADRs)
+
+- [ADR-001: Playwright Only](/.claude/docs/decisions/001-playwright-only.md)
+- [ADR-002: Meilisearch Not OpenSearch](/.claude/docs/decisions/002-meilisearch-not-opensearch.md)
+- [ADR-003: Adapter vs Source Separation](/.claude/docs/decisions/003-adapter-vs-source-separation.md)
+
+---
+
+## Specialized Agents
+
+Delegate to Claude Code agents for domain-specific work:
+
+- **`drizzle-expert`** — Schema changes, queries, migrations, pgvector
+- **`fastify-expert`** — Routes, plugins, hooks, error handling
+- **`vue-expert`** — Components, composables, Pinia stores
+- **`pipeline-expert`** — Workers, event emission, idempotency, scoring
+- **`scraping-expert`** — Adapters, anti-bot evasion, Playwright stealth
+
+See [`.claude/agents/`](/.claude/agents/) for full definitions.
+
+---
+
+## Contributing
+
+1. **Read the docs** — Start with [Architecture Overview](/.claude/docs/architecture.md)
+2. **Pick an issue** — Check [open issues](https://github.com/im-codebreaker/brand-radar/issues)
+3. **Create a branch** — `feat/your-feature` or `fix/your-fix`
+4. **Follow conventions** — See [Commit Conventions](/.claude/docs/commit-conventions.md)
+5. **Write tests** — Integration tests for workers, unit tests for services
+6. **Open a PR** — Link to the issue, describe changes, add screenshots if UI
+
+---
+
+## Roadmap
+
+### ✅ Phase 1 — Stable Event-Sourced Pipeline (Current)
+- Event backbone (`system_events`) with `trace_id` propagation
+- Idempotent workers via `processed_jobs`
+- Pipeline versioning and backfill support
+- Entity resolution with merge review queue
+- Basic scoring (social + ecommerce + data quality)
+- Meilisearch keyword search
+
+### 🚧 Phase 2 — Intelligence Layer (Next)
+- AI enrichment (embeddings, classification)
+- pgvector semantic search
+- Hybrid search (keyword + semantic)
+- Data quality scoring and dashboard
+- Cost governance UI
+- Trend detection and sparklines
+
+### 🔮 Phase 3 — Graph & Prediction (Future)
+- Brand relationship graph (Cytoscape.js)
+- Backfill UI (admin-triggered replay)
+- Natural language search
+- Recommendation engine
+- Viral prediction models
+
+---
 
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
+---
+
+## Questions?
+
+- **Issues:** [GitHub Issues](https://github.com/im-codebreaker/brand-radar/issues)
+- **Docs:** [`.claude/docs/`](/.claude/docs/)
+- **Email:** [mbouchard@antidots-group.com](mailto:mbouchard@antidots-group.com)
+
+**Built with ❤️ by [@im-codebreaker](https://github.com/im-codebreaker)**
